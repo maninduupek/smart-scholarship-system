@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 function Scholarships() {
   const scholarships = [
     {
@@ -35,7 +37,9 @@ function Scholarships() {
               <h2>{scholarship.title}</h2>
               <h3>{scholarship.provider}</h3>
               <p>{scholarship.description}</p>
-              <button>View Details</button>
+              <Link to={`/scholarships/${scholarship.id}`}>
+  <button>View Details</button>
+</Link>
             </div>
           ))}
         </div>
