@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 
 function ScholarshipDetails() {
   const { id } = useParams();
@@ -43,7 +43,9 @@ function ScholarshipDetails() {
             <h2>Eligibility</h2>
             <p>{scholarship.eligibility}</p>
 
-            <button>Apply Now</button>
+            <Link to={`/scholarships/${id}/apply`}>
+  <button>Apply Now</button>
+</Link>
           </>
         ) : (
           <h1>Scholarship Not Found</h1>

@@ -18,15 +18,24 @@ function App() {
 
       <Routes>
         <Route path="/" element={<Home />} />
+
         <Route path="/scholarships" element={<Scholarships />} />
+
         <Route
           path="/scholarships/:id"
           element={<ScholarshipDetails />}
         />
+
+        <Route
+          path="/scholarships/:id/apply"
+          element={<ApplicationForm />}
+        />
+
         <Route path="/about" element={<About />} />
+
         <Route path="/login" element={<Login />} />
+
         <Route path="/register" element={<Register />} />
-        <Route path="/apply" element={<ApplicationForm />} />
       </Routes>
     </BrowserRouter>
   );
