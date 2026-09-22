@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const User = require("./models/User");
 const authMiddleware = require("./middleware/authMiddleware");
+const roleMiddleware = require("./middleware/roleMiddleware");
 
 const app = express();
 
@@ -40,6 +41,18 @@ app.get("/api/protected", authMiddleware, (req, res) => {
     user: req.user,
   });
 });
+
+app.get(
+  "/api/student-test",
+  authMiddleware,
+  roleMiddleware(["student"]),
+  (req, res) => {
+    res.status(200).json({
+      message: "Student access granted!",
+      user: req.user,
+    });
+  }
+);
 
 // Register user
 app.post("/api/users/register", async (req, res) => {

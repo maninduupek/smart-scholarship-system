@@ -16,6 +16,7 @@ function Login() {
     });
   };
 
+  // Login user
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -64,7 +65,7 @@ function Login() {
     }
   };
 
-  // Test protected backend route
+  // Test basic protected route
   const testProtectedRoute = async () => {
     const token = localStorage.getItem("token");
 
@@ -97,6 +98,44 @@ function Login() {
       setMessage(data.message);
 
       console.log("Protected route response:", data);
+    } catch (error) {
+      setError("Unable to connect to the backend.");
+    }
+  };
+
+  // Test student-only route
+  const testStudentRoute = async () => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      setError("No login token found.");
+      return;
+    }
+
+    setMessage("");
+    setError("");
+
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/student-test",
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.message || "Access denied.");
+        return;
+      }
+
+      setMessage(data.message);
+
+      console.log("Student route response:", data);
     } catch (error) {
       setError("Unable to connect to the backend.");
     }
@@ -142,6 +181,13 @@ function Login() {
 
       <button type="button" onClick={testProtectedRoute}>
         Test Protected Route
+      </button>
+
+      <br />
+      <br />
+
+      <button type="button" onClick={testStudentRoute}>
+        Test Student Route
       </button>
     </div>
   );
