@@ -8,11 +8,11 @@ const app = express();
 
 const PORT = 5000;
 
+// Allow frontend to communicate with backend
 app.use(cors());
-app.use(express.json());
 
 // Allow Express to read JSON data
-
+app.use(express.json());
 
 // Connect to local MongoDB
 mongoose
@@ -51,7 +51,7 @@ app.post("/api/users/register", async (req, res) => {
       fullName,
       email,
       password: hashedPassword,
-      role,
+      role: role || "student",
     });
 
     await user.save();
@@ -73,6 +73,51 @@ app.post("/api/users/register", async (req, res) => {
   }
 });
 
+// Login user
+app.post("/api/users/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Find user by email
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(401).json({
+        message: "Invalid email or password",
+      });
+    }
+
+    // Compare entered password with hashed password
+    const isPasswordCorrect = await bcrypt.compare(
+      password,
+      user.password
+    );
+
+    if (!isPasswordCorrect) {
+      return res.status(401).json({
+        message: "Invalid email or password",
+      });
+    }
+
+    // Login successful
+    res.status(200).json({
+      message: "Login successful",
+      user: {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Login failed",
+      error: error.message,
+    });
+  }
+});
+
+// Start server
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
