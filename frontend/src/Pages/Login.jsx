@@ -41,6 +41,12 @@ function Login() {
         return;
       }
 
+      // Save JWT token in browser
+      localStorage.setItem("token", data.token);
+
+      // Save logged-in user information
+      localStorage.setItem("user", JSON.stringify(data.user));
+
       setMessage(`Welcome, ${data.user.fullName}!`);
 
       setFormData({
@@ -48,11 +54,51 @@ function Login() {
         password: "",
       });
 
-      console.log("Logged in user:", data.user);
+      console.log("Login successful");
+      console.log("Token:", data.token);
+      console.log("User:", data.user);
     } catch (error) {
       setError(
         "Unable to connect to the server. Please make sure the backend is running."
       );
+    }
+  };
+
+  // Test protected backend route
+  const testProtectedRoute = async () => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      setError("No login token found.");
+      return;
+    }
+
+    setMessage("");
+    setError("");
+
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/protected",
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.message || "Access denied.");
+        return;
+      }
+
+      setMessage(data.message);
+
+      console.log("Protected route response:", data);
+    } catch (error) {
+      setError("Unable to connect to the backend.");
     }
   };
 
@@ -91,6 +137,12 @@ function Login() {
 
         <button type="submit">Login</button>
       </form>
+
+      <br />
+
+      <button type="button" onClick={testProtectedRoute}>
+        Test Protected Route
+      </button>
     </div>
   );
 }

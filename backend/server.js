@@ -1,12 +1,17 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const User = require("./models/User");
+const authMiddleware = require("./middleware/authMiddleware");
 
 const app = express();
 
 const PORT = 5000;
+
+// JWT secret
+const JWT_SECRET = "smart-scholarship-secret-key";
 
 // Allow frontend to communicate with backend
 app.use(cors());
@@ -27,6 +32,13 @@ mongoose
 // Test route
 app.get("/", (req, res) => {
   res.send("Smart Scholarship Backend is running!");
+});
+
+app.get("/api/protected", authMiddleware, (req, res) => {
+  res.status(200).json({
+    message: "You accessed a protected route successfully!",
+    user: req.user,
+  });
 });
 
 // Register user
@@ -99,9 +111,23 @@ app.post("/api/users/login", async (req, res) => {
       });
     }
 
+    // Create JWT token
+    const token = jwt.sign(
+      {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+      },
+      JWT_SECRET,
+      {
+        expiresIn: "1h",
+      }
+    );
+
     // Login successful
     res.status(200).json({
       message: "Login successful",
+      token,
       user: {
         id: user._id,
         fullName: user.fullName,
