@@ -3,7 +3,10 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
+
 const User = require("./models/User");
+const Scholarship = require("./models/Scholarship");
+
 const authMiddleware = require("./middleware/authMiddleware");
 const roleMiddleware = require("./middleware/roleMiddleware");
 
@@ -30,10 +33,17 @@ mongoose
     console.error("MongoDB connection failed:", error);
   });
 
-// Test route
+// ==========================================
+// TEST ROUTE
+// ==========================================
+
 app.get("/", (req, res) => {
   res.send("Smart Scholarship Backend is running!");
 });
+
+// ==========================================
+// PROTECTED TEST ROUTE
+// ==========================================
 
 app.get("/api/protected", authMiddleware, (req, res) => {
   res.status(200).json({
@@ -41,6 +51,10 @@ app.get("/api/protected", authMiddleware, (req, res) => {
     user: req.user,
   });
 });
+
+// ==========================================
+// STUDENT-ONLY TEST ROUTE
+// ==========================================
 
 app.get(
   "/api/student-test",
@@ -54,7 +68,52 @@ app.get(
   }
 );
 
-// Register user
+// ==========================================
+// TEMPORARY TEST SCHOLARSHIP ROUTE
+// ==========================================
+
+app.post(
+  "/api/scholarships/test",
+  authMiddleware,
+  roleMiddleware(["student"]),
+  async (req, res) => {
+    try {
+      const scholarship = new Scholarship({
+        title: "Test Technology Scholarship",
+        provider: "Tech Foundation",
+        description:
+          "A test scholarship for technology students.",
+        amount: 100000,
+        deadline: new Date("2026-12-31"),
+        eligibility:
+          "Open to university students studying technology.",
+        requirements: [
+          "Student ID",
+          "Academic transcript",
+          "Recommendation letter",
+        ],
+        status: "active",
+      });
+
+      await scholarship.save();
+
+      res.status(201).json({
+        message: "Test scholarship created successfully!",
+        scholarship,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Failed to create scholarship.",
+        error: error.message,
+      });
+    }
+  }
+);
+
+// ==========================================
+// REGISTER USER
+// ==========================================
+
 app.post("/api/users/register", async (req, res) => {
   try {
     const { fullName, email, password, role } = req.body;
@@ -98,7 +157,10 @@ app.post("/api/users/register", async (req, res) => {
   }
 });
 
-// Login user
+// ==========================================
+// LOGIN USER
+// ==========================================
+
 app.post("/api/users/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -156,7 +218,10 @@ app.post("/api/users/login", async (req, res) => {
   }
 });
 
-// Start server
+// ==========================================
+// START SERVER
+// ==========================================
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
