@@ -68,47 +68,6 @@ app.get(
   }
 );
 
-// ==========================================
-// TEMPORARY TEST SCHOLARSHIP ROUTE
-// ==========================================
-
-app.post(
-  "/api/scholarships/test",
-  authMiddleware,
-  roleMiddleware(["student"]),
-  async (req, res) => {
-    try {
-      const scholarship = new Scholarship({
-        title: "Test Technology Scholarship",
-        provider: "Tech Foundation",
-        description:
-          "A test scholarship for technology students.",
-        amount: 100000,
-        deadline: new Date("2026-12-31"),
-        eligibility:
-          "Open to university students studying technology.",
-        requirements: [
-          "Student ID",
-          "Academic transcript",
-          "Recommendation letter",
-        ],
-        status: "active",
-      });
-
-      await scholarship.save();
-
-      res.status(201).json({
-        message: "Test scholarship created successfully!",
-        scholarship,
-      });
-    } catch (error) {
-      res.status(500).json({
-        message: "Failed to create scholarship.",
-        error: error.message,
-      });
-    }
-  }
-);
 
 // ==========================================
 // REGISTER USER
