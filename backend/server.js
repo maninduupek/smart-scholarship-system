@@ -177,6 +177,54 @@ app.post("/api/users/login", async (req, res) => {
   }
 });
 
+
+// ==========================================
+// CREATE SCHOLARSHIP
+// Provider/Admin only
+// ==========================================
+
+app.post(
+  "/api/scholarships",
+  authMiddleware,
+  roleMiddleware(["provider", "admin"]),
+  async (req, res) => {
+    try {
+      const {
+        title,
+        provider,
+        description,
+        amount,
+        deadline,
+        eligibility,
+        requirements,
+      } = req.body;
+
+      const scholarship = new Scholarship({
+        title,
+        provider,
+        description,
+        amount,
+        deadline,
+        eligibility,
+        requirements,
+        status: "active",
+      });
+
+      await scholarship.save();
+
+      res.status(201).json({
+        message: "Scholarship created successfully!",
+        scholarship,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Failed to create scholarship.",
+        error: error.message,
+      });
+    }
+  }
+);
+
 // ==========================================
 // START SERVER
 // ==========================================
