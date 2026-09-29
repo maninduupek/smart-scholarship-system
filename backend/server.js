@@ -252,6 +252,38 @@ app.get(
 );
 
 // ==========================================
+// GET SINGLE SCHOLARSHIP
+// Authenticated users can view scholarship details
+// ==========================================
+
+app.get(
+  "/api/scholarships/:id",
+  authMiddleware,
+  async (req, res) => {
+    try {
+      const scholarship = await Scholarship.findById(
+        req.params.id
+      );
+
+      if (!scholarship) {
+        return res.status(404).json({
+          message: "Scholarship not found.",
+        });
+      }
+
+      res.status(200).json({
+        scholarship,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Failed to fetch scholarship.",
+        error: error.message,
+      });
+    }
+  }
+);
+
+// ==========================================
 // START SERVER
 // ==========================================
 
