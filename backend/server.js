@@ -23,7 +23,10 @@ app.use(cors());
 // Allow Express to read JSON data
 app.use(express.json());
 
-// Connect to local MongoDB
+// ==========================================
+// CONNECT TO LOCAL MONGODB
+// ==========================================
+
 mongoose
   .connect("mongodb://127.0.0.1:27017/smartScholarshipDB")
   .then(() => {
@@ -68,7 +71,6 @@ app.get(
   }
 );
 
-
 // ==========================================
 // REGISTER USER
 // ==========================================
@@ -86,10 +88,10 @@ app.post("/api/users/register", async (req, res) => {
       });
     }
 
-    // Hash the password
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create new user
+    // Create user
     const user = new User({
       fullName,
       email,
@@ -124,7 +126,7 @@ app.post("/api/users/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find user by email
+    // Find user
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -133,7 +135,7 @@ app.post("/api/users/login", async (req, res) => {
       });
     }
 
-    // Compare entered password with hashed password
+    // Check password
     const isPasswordCorrect = await bcrypt.compare(
       password,
       user.password
@@ -158,7 +160,6 @@ app.post("/api/users/login", async (req, res) => {
       }
     );
 
-    // Login successful
     res.status(200).json({
       message: "Login successful",
       token,
@@ -176,7 +177,6 @@ app.post("/api/users/login", async (req, res) => {
     });
   }
 });
-
 
 // ==========================================
 // CREATE SCHOLARSHIP
@@ -219,6 +219,32 @@ app.post(
     } catch (error) {
       res.status(500).json({
         message: "Failed to create scholarship.",
+        error: error.message,
+      });
+    }
+  }
+);
+
+// ==========================================
+// GET ALL SCHOLARSHIPS
+// Authenticated users can view scholarships
+// ==========================================
+
+app.get(
+  "/api/scholarships",
+  authMiddleware,
+  async (req, res) => {
+    try {
+      const scholarships = await Scholarship.find({
+        status: "active",
+      }).sort({ createdAt: -1 });
+
+      res.status(200).json({
+        scholarships,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Failed to fetch scholarships.",
         error: error.message,
       });
     }
