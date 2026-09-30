@@ -197,10 +197,7 @@ app.post(
       const scholarship = new Scholarship({
         title,
         provider,
-
-        // Save the account that created the scholarship
         providerUser: req.user.id,
-
         description,
         amount,
         deadline,
@@ -225,8 +222,7 @@ app.post(
 );
 
 // ==========================================
-// GET ALL SCHOLARSHIPS
-// Authenticated users
+// GET ALL ACTIVE SCHOLARSHIPS
 // ==========================================
 
 app.get(
@@ -251,8 +247,47 @@ app.get(
 );
 
 // ==========================================
+// GET MY SCHOLARSHIPS
+// Provider/Admin only
+//
+// IMPORTANT:
+// Keep this BEFORE /api/scholarships/:id
+// ==========================================
+
+app.get(
+  "/api/scholarships/provider/my",
+  authMiddleware,
+  roleMiddleware(["provider", "admin"]),
+  async (req, res) => {
+    try {
+      let scholarships;
+
+      if (req.user.role === "admin") {
+        scholarships = await Scholarship.find().sort({
+          createdAt: -1,
+        });
+      } else {
+        scholarships = await Scholarship.find({
+          providerUser: req.user.id,
+        }).sort({
+          createdAt: -1,
+        });
+      }
+
+      res.status(200).json({
+        scholarships,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Failed to fetch provider scholarships.",
+        error: error.message,
+      });
+    }
+  }
+);
+
+// ==========================================
 // GET SINGLE SCHOLARSHIP
-// Authenticated users
 // ==========================================
 
 app.get(
@@ -276,6 +311,176 @@ app.get(
     } catch (error) {
       res.status(500).json({
         message: "Failed to fetch scholarship.",
+        error: error.message,
+      });
+    }
+  }
+);
+
+// ==========================================
+// EDIT SCHOLARSHIP
+// Provider can edit only their scholarship
+// Admin can edit any scholarship
+// ==========================================
+
+app.put(
+  "/api/scholarships/:id",
+  authMiddleware,
+  roleMiddleware(["provider", "admin"]),
+  async (req, res) => {
+    try {
+      const scholarship = await Scholarship.findById(
+        req.params.id
+      );
+
+      if (!scholarship) {
+        return res.status(404).json({
+          message: "Scholarship not found.",
+        });
+      }
+
+      // Provider ownership check
+      if (req.user.role === "provider") {
+        if (!scholarship.providerUser) {
+          return res.status(403).json({
+            message:
+              "This scholarship has no provider ownership information.",
+          });
+        }
+
+        if (
+          scholarship.providerUser.toString() !==
+          req.user.id.toString()
+        ) {
+          return res.status(403).json({
+            message:
+              "You do not have permission to edit this scholarship.",
+          });
+        }
+      }
+
+      const {
+        title,
+        provider,
+        description,
+        amount,
+        deadline,
+        eligibility,
+        requirements,
+      } = req.body;
+
+      if (title !== undefined) {
+        scholarship.title = title;
+      }
+
+      if (provider !== undefined) {
+        scholarship.provider = provider;
+      }
+
+      if (description !== undefined) {
+        scholarship.description = description;
+      }
+
+      if (amount !== undefined) {
+        scholarship.amount = amount;
+      }
+
+      if (deadline !== undefined) {
+        scholarship.deadline = deadline;
+      }
+
+      if (eligibility !== undefined) {
+        scholarship.eligibility = eligibility;
+      }
+
+      if (requirements !== undefined) {
+        scholarship.requirements = requirements;
+      }
+
+      await scholarship.save();
+
+      res.status(200).json({
+        message: "Scholarship updated successfully!",
+        scholarship,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Failed to update scholarship.",
+        error: error.message,
+      });
+    }
+  }
+);
+
+// ==========================================
+// CHANGE SCHOLARSHIP STATUS
+// active <-> closed
+// Provider can change only their scholarship
+// Admin can change any scholarship
+// ==========================================
+
+app.patch(
+  "/api/scholarships/:id/status",
+  authMiddleware,
+  roleMiddleware(["provider", "admin"]),
+  async (req, res) => {
+    try {
+      const { status } = req.body;
+
+      const allowedStatuses = [
+        "active",
+        "closed",
+      ];
+
+      if (!allowedStatuses.includes(status)) {
+        return res.status(400).json({
+          message: "Invalid scholarship status.",
+        });
+      }
+
+      const scholarship = await Scholarship.findById(
+        req.params.id
+      );
+
+      if (!scholarship) {
+        return res.status(404).json({
+          message: "Scholarship not found.",
+        });
+      }
+
+      // Provider ownership check
+      if (req.user.role === "provider") {
+        if (!scholarship.providerUser) {
+          return res.status(403).json({
+            message:
+              "This scholarship has no provider ownership information.",
+          });
+        }
+
+        if (
+          scholarship.providerUser.toString() !==
+          req.user.id.toString()
+        ) {
+          return res.status(403).json({
+            message:
+              "You do not have permission to manage this scholarship.",
+          });
+        }
+      }
+
+      scholarship.status = status;
+
+      await scholarship.save();
+
+      res.status(200).json({
+        message: `Scholarship ${
+          status === "active" ? "reopened" : "closed"
+        } successfully!`,
+        scholarship,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Failed to change scholarship status.",
         error: error.message,
       });
     }
@@ -313,14 +518,13 @@ app.post(
         });
       }
 
-      // Prevent application to closed scholarship
+      // Student cannot apply to a closed scholarship
       if (scholarship.status !== "active") {
         return res.status(400).json({
           message: "This scholarship is not currently active.",
         });
       }
 
-      // Check whether student already applied
       const existingApplication = await Application.findOne({
         student: req.user.id,
         scholarship: scholarshipId,
@@ -378,7 +582,9 @@ app.get(
           "scholarship",
           "title provider amount deadline"
         )
-        .sort({ createdAt: -1 });
+        .sort({
+          createdAt: -1,
+        });
 
       res.status(200).json({
         applications,
@@ -394,8 +600,9 @@ app.get(
 
 // ==========================================
 // GET PROVIDER / ADMIN APPLICATIONS
-// Provider sees only their applications
-// Admin sees all applications
+// Provider sees only applications belonging
+// to scholarships they created.
+// Admin sees everything.
 // ==========================================
 
 app.get(
@@ -406,7 +613,6 @@ app.get(
     try {
       let applications;
 
-      // Admin can see every application
       if (req.user.role === "admin") {
         applications = await Application.find()
           .populate(
@@ -417,19 +623,20 @@ app.get(
             "scholarship",
             "title provider amount deadline providerUser"
           )
-          .sort({ createdAt: -1 });
+          .sort({
+            createdAt: -1,
+          });
       } else {
-        // Find scholarships created by this provider
-        const providerScholarships = await Scholarship.find({
-          providerUser: req.user.id,
-        }).select("_id");
+        const providerScholarships =
+          await Scholarship.find({
+            providerUser: req.user.id,
+          }).select("_id");
 
-        // Get only the scholarship IDs
-        const scholarshipIds = providerScholarships.map(
-          (scholarship) => scholarship._id
-        );
+        const scholarshipIds =
+          providerScholarships.map(
+            (scholarship) => scholarship._id
+          );
 
-        // Find applications for those scholarships only
         applications = await Application.find({
           scholarship: {
             $in: scholarshipIds,
@@ -443,7 +650,9 @@ app.get(
             "scholarship",
             "title provider amount deadline providerUser"
           )
-          .sort({ createdAt: -1 });
+          .sort({
+            createdAt: -1,
+          });
       }
 
       res.status(200).json({
@@ -451,7 +660,8 @@ app.get(
       });
     } catch (error) {
       res.status(500).json({
-        message: "Failed to fetch provider applications.",
+        message:
+          "Failed to fetch provider applications.",
         error: error.message,
       });
     }
@@ -461,8 +671,8 @@ app.get(
 // ==========================================
 // UPDATE APPLICATION STATUS
 // Provider can update only applications
-// belonging to their scholarships
-// Admin can update any application
+// belonging to their scholarships.
+// Admin can update any application.
 // ==========================================
 
 app.patch(
@@ -480,14 +690,12 @@ app.patch(
         "rejected",
       ];
 
-      // Validate status
       if (!allowedStatuses.includes(status)) {
         return res.status(400).json({
           message: "Invalid application status.",
         });
       }
 
-      // Find application and scholarship
       const application = await Application.findById(
         req.params.id
       ).populate("scholarship");
@@ -504,15 +712,11 @@ app.patch(
         });
       }
 
-      // ======================================
-      // PROVIDER OWNERSHIP CHECK
-      // ======================================
-
+      // Provider ownership check
       if (req.user.role === "provider") {
         const providerUser =
           application.scholarship.providerUser;
 
-        // Old scholarships may not have providerUser
         if (!providerUser) {
           return res.status(403).json({
             message:
@@ -520,7 +724,6 @@ app.patch(
           });
         }
 
-        // Check whether logged-in provider owns scholarship
         if (
           providerUser.toString() !==
           req.user.id.toString()
@@ -532,21 +735,19 @@ app.patch(
         }
       }
 
-      // ======================================
-      // UPDATE STATUS
-      // ======================================
-
       application.status = status;
 
       await application.save();
 
       res.status(200).json({
-        message: "Application status updated successfully!",
+        message:
+          "Application status updated successfully!",
         application,
       });
     } catch (error) {
       res.status(500).json({
-        message: "Failed to update application status.",
+        message:
+          "Failed to update application status.",
         error: error.message,
       });
     }
@@ -558,5 +759,7 @@ app.patch(
 // ==========================================
 
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(
+    `Server running on http://localhost:${PORT}`
+  );
 });

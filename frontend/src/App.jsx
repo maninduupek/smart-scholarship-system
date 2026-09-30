@@ -11,6 +11,8 @@ import ApplicationForm from "./pages/ApplicationForm";
 import MyApplications from "./pages/MyApplications";
 import ProviderApplications from "./pages/ProviderApplications";
 import CreateScholarship from "./pages/CreateScholarship";
+import MyScholarships from "./pages/MyScholarships";
+import EditScholarship from "./pages/EditScholarship";
 
 import "./App.css";
 
@@ -43,13 +45,23 @@ function App() {
         />
 
         <Route
-          path="/provider-applications"
-          element={<ProviderApplications />}
+          path="/my-scholarships"
+          element={<MyScholarships />}
         />
 
         <Route
           path="/create-scholarship"
           element={<CreateScholarship />}
+        />
+
+        <Route
+          path="/edit-scholarship/:id"
+          element={<EditScholarship />}
+        />
+
+        <Route
+          path="/provider-applications"
+          element={<ProviderApplications />}
         />
 
         <Route path="/about" element={<About />} />

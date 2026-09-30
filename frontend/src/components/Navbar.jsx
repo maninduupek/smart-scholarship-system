@@ -18,6 +18,10 @@ function Navbar() {
           My Applications
         </Link>
 
+        <Link to="/my-scholarships">
+          My Scholarships
+        </Link>
+
         <Link to="/create-scholarship">
           Create Scholarship
         </Link>
