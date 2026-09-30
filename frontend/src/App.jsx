@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Navbar from "./components/Navbar";
+import ProtectedRoute from "./components/ProtectedRoute";
+
 import Home from "./pages/Home";
 import Scholarships from "./pages/Scholarships";
 import ScholarshipDetails from "./pages/ScholarshipDetails";
@@ -22,53 +24,105 @@ function App() {
       <Navbar />
 
       <Routes>
+        {/* PUBLIC ROUTES */}
+
         <Route path="/" element={<Home />} />
-
-        <Route
-          path="/scholarships"
-          element={<Scholarships />}
-        />
-
-        <Route
-          path="/scholarships/:id"
-          element={<ScholarshipDetails />}
-        />
-
-        <Route
-          path="/scholarships/:id/apply"
-          element={<ApplicationForm />}
-        />
-
-        <Route
-          path="/my-applications"
-          element={<MyApplications />}
-        />
-
-        <Route
-          path="/my-scholarships"
-          element={<MyScholarships />}
-        />
-
-        <Route
-          path="/create-scholarship"
-          element={<CreateScholarship />}
-        />
-
-        <Route
-          path="/edit-scholarship/:id"
-          element={<EditScholarship />}
-        />
-
-        <Route
-          path="/provider-applications"
-          element={<ProviderApplications />}
-        />
 
         <Route path="/about" element={<About />} />
 
         <Route path="/login" element={<Login />} />
 
         <Route path="/register" element={<Register />} />
+
+        {/* LOGGED-IN USERS */}
+
+        <Route
+          path="/scholarships"
+          element={
+            <ProtectedRoute
+              allowedRoles={["student", "provider", "admin"]}
+            >
+              <Scholarships />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/scholarships/:id"
+          element={
+            <ProtectedRoute
+              allowedRoles={["student", "provider", "admin"]}
+            >
+              <ScholarshipDetails />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* STUDENT ROUTES */}
+
+        <Route
+          path="/scholarships/:id/apply"
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <ApplicationForm />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/my-applications"
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <MyApplications />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* PROVIDER / ADMIN ROUTES */}
+
+        <Route
+          path="/my-scholarships"
+          element={
+            <ProtectedRoute
+              allowedRoles={["provider", "admin"]}
+            >
+              <MyScholarships />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/create-scholarship"
+          element={
+            <ProtectedRoute
+              allowedRoles={["provider", "admin"]}
+            >
+              <CreateScholarship />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/edit-scholarship/:id"
+          element={
+            <ProtectedRoute
+              allowedRoles={["provider", "admin"]}
+            >
+              <EditScholarship />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/provider-applications"
+          element={
+            <ProtectedRoute
+              allowedRoles={["provider", "admin"]}
+            >
+              <ProviderApplications />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );

@@ -1,6 +1,31 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 function Navbar() {
+  const navigate = useNavigate();
+
+  const token = localStorage.getItem("token");
+
+  let user = null;
+
+  try {
+    const storedUser = localStorage.getItem("user");
+
+    if (storedUser) {
+      user = JSON.parse(storedUser);
+    }
+  } catch (error) {
+    console.error("Failed to read user information.");
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    navigate("/login");
+
+    window.location.reload();
+  };
+
   return (
     <nav>
       <h2>Smart Scholarship System</h2>
@@ -10,37 +35,89 @@ function Navbar() {
           Home
         </Link>
 
-        <Link to="/scholarships">
-          Scholarships
-        </Link>
+        {/* STUDENT LINKS */}
+        {token && user?.role === "student" && (
+          <>
+            <Link to="/scholarships">
+              Scholarships
+            </Link>
 
-        <Link to="/my-applications">
-          My Applications
-        </Link>
+            <Link to="/my-applications">
+              My Applications
+            </Link>
+          </>
+        )}
 
-        <Link to="/my-scholarships">
-          My Scholarships
-        </Link>
+        {/* PROVIDER LINKS */}
+        {token && user?.role === "provider" && (
+          <>
+            <Link to="/scholarships">
+              Scholarships
+            </Link>
 
-        <Link to="/create-scholarship">
-          Create Scholarship
-        </Link>
+            <Link to="/my-scholarships">
+              My Scholarships
+            </Link>
 
-        <Link to="/provider-applications">
-          Provider Applications
-        </Link>
+            <Link to="/create-scholarship">
+              Create Scholarship
+            </Link>
+
+            <Link to="/provider-applications">
+              Provider Applications
+            </Link>
+          </>
+        )}
+
+        {/* ADMIN LINKS - we will expand these later */}
+        {token && user?.role === "admin" && (
+          <>
+            <Link to="/scholarships">
+              Scholarships
+            </Link>
+
+            <Link to="/my-scholarships">
+              Manage Scholarships
+            </Link>
+
+            <Link to="/provider-applications">
+              Manage Applications
+            </Link>
+          </>
+        )}
 
         <Link to="/about">
           About
         </Link>
 
-        <Link to="/login">
-          Login
-        </Link>
+        {/* NOT LOGGED IN */}
+        {!token && (
+          <>
+            <Link to="/login">
+              Login
+            </Link>
 
-        <Link to="/register">
-          Register
-        </Link>
+            <Link to="/register">
+              Register
+            </Link>
+          </>
+        )}
+
+        {/* LOGGED IN */}
+        {token && (
+          <>
+            <span>
+              {user?.fullName}
+            </span>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+            >
+              Logout
+            </button>
+          </>
+        )}
       </div>
     </nav>
   );
