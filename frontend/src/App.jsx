@@ -10,6 +10,7 @@ import Register from "./pages/Register";
 import ApplicationForm from "./pages/ApplicationForm";
 import MyApplications from "./pages/MyApplications";
 import ProviderApplications from "./pages/ProviderApplications";
+import CreateScholarship from "./pages/CreateScholarship";
 
 import "./App.css";
 
@@ -44,6 +45,11 @@ function App() {
         <Route
           path="/provider-applications"
           element={<ProviderApplications />}
+        />
+
+        <Route
+          path="/create-scholarship"
+          element={<CreateScholarship />}
         />
 
         <Route path="/about" element={<About />} />

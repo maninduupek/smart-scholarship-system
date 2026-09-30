@@ -6,7 +6,9 @@ function Navbar() {
       <h2>Smart Scholarship System</h2>
 
       <div>
-        <Link to="/">Home</Link>
+        <Link to="/">
+          Home
+        </Link>
 
         <Link to="/scholarships">
           Scholarships
@@ -16,15 +18,25 @@ function Navbar() {
           My Applications
         </Link>
 
+        <Link to="/create-scholarship">
+          Create Scholarship
+        </Link>
+
         <Link to="/provider-applications">
           Provider Applications
         </Link>
 
-        <Link to="/about">About</Link>
+        <Link to="/about">
+          About
+        </Link>
 
-        <Link to="/login">Login</Link>
+        <Link to="/login">
+          Login
+        </Link>
 
-        <Link to="/register">Register</Link>
+        <Link to="/register">
+          Register
+        </Link>
       </div>
     </nav>
   );

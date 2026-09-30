@@ -12,6 +12,12 @@ const scholarshipSchema = new mongoose.Schema(
       required: true,
     },
 
+    providerUser: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: false,
+    },
+
     description: {
       type: String,
       required: true,
