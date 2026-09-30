@@ -358,6 +358,39 @@ app.post(
 );
 
 // ==========================================
+// GET MY APPLICATIONS
+// Student only
+// ==========================================
+
+app.get(
+  "/api/applications/my",
+  authMiddleware,
+  roleMiddleware(["student"]),
+  async (req, res) => {
+    try {
+      // Find applications belonging to logged-in student
+      const applications = await Application.find({
+        student: req.user.id,
+      })
+        .populate(
+          "scholarship",
+          "title provider amount deadline"
+        )
+        .sort({ createdAt: -1 });
+
+      res.status(200).json({
+        applications,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Failed to fetch applications.",
+        error: error.message,
+      });
+    }
+  }
+);
+
+// ==========================================
 // START SERVER
 // ==========================================
 

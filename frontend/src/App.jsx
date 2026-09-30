@@ -8,6 +8,7 @@ import About from "./pages/About";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ApplicationForm from "./pages/ApplicationForm";
+import MyApplications from "./pages/MyApplications";
 
 import "./App.css";
 
@@ -19,7 +20,10 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
 
-        <Route path="/scholarships" element={<Scholarships />} />
+        <Route
+          path="/scholarships"
+          element={<Scholarships />}
+        />
 
         <Route
           path="/scholarships/:id"
@@ -29,6 +33,11 @@ function App() {
         <Route
           path="/scholarships/:id/apply"
           element={<ApplicationForm />}
+        />
+
+        <Route
+          path="/my-applications"
+          element={<MyApplications />}
         />
 
         <Route path="/about" element={<About />} />
