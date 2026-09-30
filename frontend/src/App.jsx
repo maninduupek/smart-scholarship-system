@@ -9,6 +9,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ApplicationForm from "./pages/ApplicationForm";
 import MyApplications from "./pages/MyApplications";
+import ProviderApplications from "./pages/ProviderApplications";
 
 import "./App.css";
 
@@ -38,6 +39,11 @@ function App() {
         <Route
           path="/my-applications"
           element={<MyApplications />}
+        />
+
+        <Route
+          path="/provider-applications"
+          element={<ProviderApplications />}
         />
 
         <Route path="/about" element={<About />} />

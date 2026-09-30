@@ -80,7 +80,6 @@ app.post("/api/users/register", async (req, res) => {
   try {
     const { fullName, email, password, role } = req.body;
 
-    // Check if user already exists
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
@@ -89,10 +88,8 @@ app.post("/api/users/register", async (req, res) => {
       });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
     const user = new User({
       fullName,
       email,
@@ -127,7 +124,6 @@ app.post("/api/users/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find user
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -136,7 +132,6 @@ app.post("/api/users/login", async (req, res) => {
       });
     }
 
-    // Check password
     const isPasswordCorrect = await bcrypt.compare(
       password,
       user.password
@@ -148,7 +143,6 @@ app.post("/api/users/login", async (req, res) => {
       });
     }
 
-    // Create JWT token
     const token = jwt.sign(
       {
         id: user._id,
@@ -228,7 +222,6 @@ app.post(
 
 // ==========================================
 // GET ALL SCHOLARSHIPS
-// Authenticated users can view scholarships
 // ==========================================
 
 app.get(
@@ -254,7 +247,6 @@ app.get(
 
 // ==========================================
 // GET SINGLE SCHOLARSHIP
-// Authenticated users can view scholarship details
 // ==========================================
 
 app.get(
@@ -305,7 +297,6 @@ app.post(
         statement,
       } = req.body;
 
-      // Check if scholarship exists
       const scholarship = await Scholarship.findById(
         scholarshipId
       );
@@ -316,7 +307,6 @@ app.post(
         });
       }
 
-      // Check if student already applied
       const existingApplication = await Application.findOne({
         student: req.user.id,
         scholarship: scholarshipId,
@@ -329,7 +319,6 @@ app.post(
         });
       }
 
-      // Create application
       const application = new Application({
         student: req.user.id,
         scholarship: scholarshipId,
@@ -368,7 +357,6 @@ app.get(
   roleMiddleware(["student"]),
   async (req, res) => {
     try {
-      // Find applications belonging to logged-in student
       const applications = await Application.find({
         student: req.user.id,
       })
@@ -384,6 +372,95 @@ app.get(
     } catch (error) {
       res.status(500).json({
         message: "Failed to fetch applications.",
+        error: error.message,
+      });
+    }
+  }
+);
+
+// ==========================================
+// GET APPLICATIONS FOR PROVIDER / ADMIN
+// ==========================================
+
+app.get(
+  "/api/applications/provider",
+  authMiddleware,
+  roleMiddleware(["provider", "admin"]),
+  async (req, res) => {
+    try {
+      const applications = await Application.find()
+        .populate(
+          "student",
+          "fullName email"
+        )
+        .populate(
+          "scholarship",
+          "title provider amount deadline"
+        )
+        .sort({ createdAt: -1 });
+
+      res.status(200).json({
+        applications,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Failed to fetch provider applications.",
+        error: error.message,
+      });
+    }
+  }
+);
+
+// ==========================================
+// UPDATE APPLICATION STATUS
+// Provider/Admin only
+// ==========================================
+
+app.patch(
+  "/api/applications/:id/status",
+  authMiddleware,
+  roleMiddleware(["provider", "admin"]),
+  async (req, res) => {
+    try {
+      const { status } = req.body;
+
+      const allowedStatuses = [
+        "submitted",
+        "under review",
+        "selected",
+        "rejected",
+      ];
+
+      // Check whether status is valid
+      if (!allowedStatuses.includes(status)) {
+        return res.status(400).json({
+          message: "Invalid application status.",
+        });
+      }
+
+      // Find application
+      const application = await Application.findById(
+        req.params.id
+      );
+
+      if (!application) {
+        return res.status(404).json({
+          message: "Application not found.",
+        });
+      }
+
+      // Update status
+      application.status = status;
+
+      await application.save();
+
+      res.status(200).json({
+        message: "Application status updated successfully!",
+        application,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Failed to update application status.",
         error: error.message,
       });
     }

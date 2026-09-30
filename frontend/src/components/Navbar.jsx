@@ -16,6 +16,10 @@ function Navbar() {
           My Applications
         </Link>
 
+        <Link to="/provider-applications">
+          Provider Applications
+        </Link>
+
         <Link to="/about">About</Link>
 
         <Link to="/login">Login</Link>
