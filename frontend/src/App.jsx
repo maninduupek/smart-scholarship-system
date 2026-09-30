@@ -15,6 +15,8 @@ import ProviderApplications from "./pages/ProviderApplications";
 import CreateScholarship from "./pages/CreateScholarship";
 import MyScholarships from "./pages/MyScholarships";
 import EditScholarship from "./pages/EditScholarship";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminUsers from "./pages/AdminUsers";
 
 import "./App.css";
 
@@ -27,14 +29,11 @@ function App() {
         {/* PUBLIC ROUTES */}
 
         <Route path="/" element={<Home />} />
-
         <Route path="/about" element={<About />} />
-
         <Route path="/login" element={<Login />} />
-
         <Route path="/register" element={<Register />} />
 
-        {/* LOGGED-IN USERS */}
+        {/* ALL LOGGED-IN USERS */}
 
         <Route
           path="/scholarships"
@@ -74,6 +73,26 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["student"]}>
               <MyApplications />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ADMIN ROUTES */}
+
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminUsers />
             </ProtectedRoute>
           }
         />

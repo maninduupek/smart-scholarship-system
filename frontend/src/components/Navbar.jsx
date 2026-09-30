@@ -31,11 +31,10 @@ function Navbar() {
       <h2>Smart Scholarship System</h2>
 
       <div>
-        <Link to="/">
-          Home
-        </Link>
+        <Link to="/">Home</Link>
 
-        {/* STUDENT LINKS */}
+        {/* STUDENT */}
+
         {token && user?.role === "student" && (
           <>
             <Link to="/scholarships">
@@ -48,7 +47,8 @@ function Navbar() {
           </>
         )}
 
-        {/* PROVIDER LINKS */}
+        {/* PROVIDER */}
+
         {token && user?.role === "provider" && (
           <>
             <Link to="/scholarships">
@@ -69,9 +69,18 @@ function Navbar() {
           </>
         )}
 
-        {/* ADMIN LINKS - we will expand these later */}
+        {/* ADMIN */}
+
         {token && user?.role === "admin" && (
           <>
+            <Link to="/admin">
+              Dashboard
+            </Link>
+
+            <Link to="/admin/users">
+              Manage Users
+            </Link>
+
             <Link to="/scholarships">
               Scholarships
             </Link>
@@ -86,11 +95,10 @@ function Navbar() {
           </>
         )}
 
-        <Link to="/about">
-          About
-        </Link>
+        <Link to="/about">About</Link>
 
         {/* NOT LOGGED IN */}
+
         {!token && (
           <>
             <Link to="/login">
@@ -104,11 +112,10 @@ function Navbar() {
         )}
 
         {/* LOGGED IN */}
+
         {token && (
           <>
-            <span>
-              {user?.fullName}
-            </span>
+            <span>{user?.fullName}</span>
 
             <button
               type="button"

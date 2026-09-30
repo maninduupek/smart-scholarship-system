@@ -14,14 +14,13 @@ const roleMiddleware = require("./middleware/roleMiddleware");
 const app = express();
 
 const PORT = 5000;
-
-// JWT secret
 const JWT_SECRET = "smart-scholarship-secret-key";
 
-// Allow frontend to communicate with backend
-app.use(cors());
+// ==========================================
+// MIDDLEWARE
+// ==========================================
 
-// Allow Express to read JSON data
+app.use(cors());
 app.use(express.json());
 
 // ==========================================
@@ -174,6 +173,82 @@ app.post("/api/users/login", async (req, res) => {
 });
 
 // ==========================================
+// ADMIN DASHBOARD STATISTICS
+// Admin only
+// ==========================================
+
+app.get(
+  "/api/admin/dashboard",
+  authMiddleware,
+  roleMiddleware(["admin"]),
+  async (req, res) => {
+    try {
+      const [
+        totalUsers,
+        totalStudents,
+        totalProviders,
+        totalScholarships,
+        activeScholarships,
+        closedScholarships,
+        totalApplications,
+      ] = await Promise.all([
+        User.countDocuments(),
+        User.countDocuments({ role: "student" }),
+        User.countDocuments({ role: "provider" }),
+        Scholarship.countDocuments(),
+        Scholarship.countDocuments({ status: "active" }),
+        Scholarship.countDocuments({ status: "closed" }),
+        Application.countDocuments(),
+      ]);
+
+      res.status(200).json({
+        statistics: {
+          totalUsers,
+          totalStudents,
+          totalProviders,
+          totalScholarships,
+          activeScholarships,
+          closedScholarships,
+          totalApplications,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Failed to load admin dashboard.",
+        error: error.message,
+      });
+    }
+  }
+);
+
+// ==========================================
+// GET ALL USERS
+// Admin only
+// ==========================================
+
+app.get(
+  "/api/admin/users",
+  authMiddleware,
+  roleMiddleware(["admin"]),
+  async (req, res) => {
+    try {
+      const users = await User.find()
+        .select("-password")
+        .sort({ createdAt: -1 });
+
+      res.status(200).json({
+        users,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Failed to fetch users.",
+        error: error.message,
+      });
+    }
+  }
+);
+
+// ==========================================
 // CREATE SCHOLARSHIP
 // Provider/Admin only
 // ==========================================
@@ -247,11 +322,11 @@ app.get(
 );
 
 // ==========================================
-// GET MY SCHOLARSHIPS
-// Provider/Admin only
+// GET PROVIDER'S SCHOLARSHIPS
+// Provider/Admin
 //
 // IMPORTANT:
-// Keep this BEFORE /api/scholarships/:id
+// This must remain before /api/scholarships/:id
 // ==========================================
 
 app.get(
@@ -319,8 +394,7 @@ app.get(
 
 // ==========================================
 // EDIT SCHOLARSHIP
-// Provider can edit only their scholarship
-// Admin can edit any scholarship
+// Provider owns scholarship OR Admin
 // ==========================================
 
 app.put(
@@ -339,7 +413,6 @@ app.put(
         });
       }
 
-      // Provider ownership check
       if (req.user.role === "provider") {
         if (!scholarship.providerUser) {
           return res.status(403).json({
@@ -414,9 +487,7 @@ app.put(
 
 // ==========================================
 // CHANGE SCHOLARSHIP STATUS
-// active <-> closed
-// Provider can change only their scholarship
-// Admin can change any scholarship
+// Provider owns scholarship OR Admin
 // ==========================================
 
 app.patch(
@@ -427,10 +498,7 @@ app.patch(
     try {
       const { status } = req.body;
 
-      const allowedStatuses = [
-        "active",
-        "closed",
-      ];
+      const allowedStatuses = ["active", "closed"];
 
       if (!allowedStatuses.includes(status)) {
         return res.status(400).json({
@@ -448,7 +516,6 @@ app.patch(
         });
       }
 
-      // Provider ownership check
       if (req.user.role === "provider") {
         if (!scholarship.providerUser) {
           return res.status(403).json({
@@ -518,7 +585,6 @@ app.post(
         });
       }
 
-      // Student cannot apply to a closed scholarship
       if (scholarship.status !== "active") {
         return res.status(400).json({
           message: "This scholarship is not currently active.",
@@ -600,9 +666,6 @@ app.get(
 
 // ==========================================
 // GET PROVIDER / ADMIN APPLICATIONS
-// Provider sees only applications belonging
-// to scholarships they created.
-// Admin sees everything.
 // ==========================================
 
 app.get(
@@ -670,9 +733,7 @@ app.get(
 
 // ==========================================
 // UPDATE APPLICATION STATUS
-// Provider can update only applications
-// belonging to their scholarships.
-// Admin can update any application.
+// Provider owns scholarship OR Admin
 // ==========================================
 
 app.patch(
@@ -712,7 +773,6 @@ app.patch(
         });
       }
 
-      // Provider ownership check
       if (req.user.role === "provider") {
         const providerUser =
           application.scholarship.providerUser;
