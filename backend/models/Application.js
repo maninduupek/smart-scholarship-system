@@ -44,6 +44,39 @@ const applicationSchema = new mongoose.Schema(
       required: true,
     },
 
+    // ========================================
+    // UPLOADED DOCUMENTS
+    // ========================================
+
+    documents: [
+      {
+        originalName: {
+          type: String,
+          required: true,
+        },
+
+        fileName: {
+          type: String,
+          required: true,
+        },
+
+        filePath: {
+          type: String,
+          required: true,
+        },
+
+        fileType: {
+          type: String,
+          required: true,
+        },
+
+        fileSize: {
+          type: Number,
+          required: true,
+        },
+      },
+    ],
+
     status: {
       type: String,
       enum: [

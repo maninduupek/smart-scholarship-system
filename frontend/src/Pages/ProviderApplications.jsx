@@ -68,7 +68,10 @@ function ProviderApplications() {
   // HANDLE STATUS DROPDOWN
   // ==========================================
 
-  const handleStatusChange = (applicationId, status) => {
+  const handleStatusChange = (
+    applicationId,
+    status
+  ) => {
     setSelectedStatuses({
       ...selectedStatuses,
       [applicationId]: status,
@@ -114,13 +117,32 @@ function ProviderApplications() {
         "Application status updated successfully!"
       );
 
-      // Reload applications to show latest status
       await fetchApplications();
     } catch (error) {
       setError(
         "Unable to connect to the server."
       );
     }
+  };
+
+  // ==========================================
+  // FORMAT FILE SIZE
+  // ==========================================
+
+  const formatFileSize = (bytes) => {
+    if (!bytes) {
+      return "Unknown size";
+    }
+
+    const sizeInMB = bytes / 1024 / 1024;
+
+    if (sizeInMB >= 1) {
+      return `${sizeInMB.toFixed(2)} MB`;
+    }
+
+    const sizeInKB = bytes / 1024;
+
+    return `${sizeInKB.toFixed(2)} KB`;
   };
 
   // ==========================================
@@ -155,11 +177,17 @@ function ProviderApplications() {
         {error && <p>{error}</p>}
 
         {applications.length === 0 ? (
-          <p>No applications have been submitted yet.</p>
+          <p>
+            No applications have been submitted yet.
+          </p>
         ) : (
           <div>
             {applications.map((application) => (
               <div key={application._id}>
+                {/* ===========================
+                    SCHOLARSHIP INFORMATION
+                ============================ */}
+
                 <h2>
                   {application.scholarship?.title ||
                     "Scholarship"}
@@ -170,6 +198,10 @@ function ProviderApplications() {
                   {application.scholarship?.provider ||
                     "Not available"}
                 </p>
+
+                {/* ===========================
+                    STUDENT INFORMATION
+                ============================ */}
 
                 <h3>Student Information</h3>
 
@@ -198,10 +230,16 @@ function ProviderApplications() {
                   {application.academicYear}
                 </p>
 
+                {/* ===========================
+                    APPLICATION INFORMATION
+                ============================ */}
+
                 <h3>Application Information</h3>
 
                 <p>
-                  <strong>Statement of Purpose:</strong>{" "}
+                  <strong>
+                    Statement of Purpose:
+                  </strong>{" "}
                   {application.statement}
                 </p>
 
@@ -217,12 +255,63 @@ function ProviderApplications() {
                   ).toLocaleDateString()}
                 </p>
 
+                {/* ===========================
+                    UPLOADED DOCUMENTS
+                ============================ */}
+
+                <h3>Uploaded Documents</h3>
+
+                {application.documents &&
+                application.documents.length > 0 ? (
+                  <ul>
+                    {application.documents.map(
+                      (document, index) => (
+                        <li
+                          key={
+                            document._id || index
+                          }
+                        >
+                          <strong>
+                            {document.originalName}
+                          </strong>
+
+                          {" — "}
+
+                          {formatFileSize(
+                            document.fileSize
+                          )}
+
+                          {" — "}
+
+                          <a
+                            href={`http://localhost:5000/uploads/${document.fileName}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            View Document
+                          </a>
+                        </li>
+                      )
+                    )}
+                  </ul>
+                ) : (
+                  <p>
+                    No documents were uploaded with
+                    this application.
+                  </p>
+                )}
+
+                {/* ===========================
+                    UPDATE STATUS
+                ============================ */}
+
                 <h3>Update Status</h3>
 
                 <select
                   value={
-                    selectedStatuses[application._id] ||
-                    application.status
+                    selectedStatuses[
+                      application._id
+                    ] || application.status
                   }
                   onChange={(e) =>
                     handleStatusChange(
@@ -247,6 +336,8 @@ function ProviderApplications() {
                     Rejected
                   </option>
                 </select>
+
+                {" "}
 
                 <button
                   type="button"

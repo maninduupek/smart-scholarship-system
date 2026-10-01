@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
+const path = require("path");
 
 const User = require("./models/User");
 const Scholarship = require("./models/Scholarship");
@@ -11,6 +12,7 @@ const StudentProfile = require("./models/StudentProfile");
 
 const authMiddleware = require("./middleware/authMiddleware");
 const roleMiddleware = require("./middleware/roleMiddleware");
+const upload = require("./middleware/uploadMiddleware");
 
 const app = express();
 
@@ -23,6 +25,12 @@ const JWT_SECRET = "smart-scholarship-secret-key";
 
 app.use(cors());
 app.use(express.json());
+
+// Make uploaded documents accessible
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "uploads"))
+);
 
 // ==========================================
 // DATABASE CONNECTION
@@ -63,10 +71,7 @@ app.post("/api/users/register", async (req, res) => {
       });
     }
 
-    const hashedPassword = await bcrypt.hash(
-      password,
-      10
-    );
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = new User({
       fullName,
@@ -163,9 +168,9 @@ app.get(
   roleMiddleware(["student"]),
   async (req, res) => {
     try {
-      const user = await User.findById(
-        req.user.id
-      ).select("fullName email");
+      const user = await User.findById(req.user.id).select(
+        "fullName email"
+      );
 
       if (!user) {
         return res.status(404).json({
@@ -227,8 +232,7 @@ app.put(
         );
 
       res.status(200).json({
-        message:
-          "Student profile saved successfully!",
+        message: "Student profile saved successfully!",
         profile,
       });
     } catch (error) {
@@ -286,11 +290,9 @@ app.post(
             ? null
             : Number(requiredAcademicYear),
 
-        requiredCourse:
-          requiredCourse || "",
+        requiredCourse: requiredCourse || "",
 
-        requirements:
-          requirements || [],
+        requirements: requirements || [],
 
         status: "active",
       });
@@ -298,8 +300,7 @@ app.post(
       await scholarship.save();
 
       res.status(201).json({
-        message:
-          "Scholarship created successfully!",
+        message: "Scholarship created successfully!",
         scholarship,
       });
     } catch (error) {
@@ -345,8 +346,7 @@ app.get(
 );
 
 // ==========================================
-// GET PROVIDER'S SCHOLARSHIPS
-// Keep before /:id
+// PROVIDER / ADMIN - OWN SCHOLARSHIPS
 // ==========================================
 
 app.get(
@@ -385,8 +385,7 @@ app.get(
 );
 
 // ==========================================
-// STUDENT - CHECK SCHOLARSHIP ELIGIBILITY
-// Keep before /api/scholarships/:id
+// STUDENT - CHECK ELIGIBILITY
 // ==========================================
 
 app.get(
@@ -396,9 +395,7 @@ app.get(
   async (req, res) => {
     try {
       const scholarship =
-        await Scholarship.findById(
-          req.params.id
-        );
+        await Scholarship.findById(req.params.id);
 
       if (!scholarship) {
         return res.status(404).json({
@@ -406,9 +403,10 @@ app.get(
         });
       }
 
-      const profile = await StudentProfile.findOne({
-        student: req.user.id,
-      });
+      const profile =
+        await StudentProfile.findOne({
+          student: req.user.id,
+        });
 
       if (!profile) {
         return res.status(400).json({
@@ -525,9 +523,7 @@ app.get(
   async (req, res) => {
     try {
       const scholarship =
-        await Scholarship.findById(
-          req.params.id
-        );
+        await Scholarship.findById(req.params.id);
 
       if (!scholarship) {
         return res.status(404).json({
@@ -549,7 +545,6 @@ app.get(
 
 // ==========================================
 // UPDATE SCHOLARSHIP
-// PROVIDER / ADMIN
 // ==========================================
 
 app.put(
@@ -559,9 +554,7 @@ app.put(
   async (req, res) => {
     try {
       const scholarship =
-        await Scholarship.findById(
-          req.params.id
-        );
+        await Scholarship.findById(req.params.id);
 
       if (!scholarship) {
         return res.status(404).json({
@@ -623,8 +616,7 @@ app.put(
       await scholarship.save();
 
       res.status(200).json({
-        message:
-          "Scholarship updated successfully!",
+        message: "Scholarship updated successfully!",
         scholarship,
       });
     } catch (error) {
@@ -638,7 +630,6 @@ app.put(
 
 // ==========================================
 // CHANGE SCHOLARSHIP STATUS
-// CLOSE / REOPEN
 // ==========================================
 
 app.patch(
@@ -659,9 +650,7 @@ app.patch(
       }
 
       const scholarship =
-        await Scholarship.findById(
-          req.params.id
-        );
+        await Scholarship.findById(req.params.id);
 
       if (!scholarship) {
         return res.status(404).json({
@@ -702,13 +691,15 @@ app.patch(
 
 // ==========================================
 // STUDENT - SUBMIT APPLICATION
-// WITH BACKEND ELIGIBILITY PROTECTION
+// ELIGIBILITY + DOCUMENT UPLOAD
 // ==========================================
 
 app.post(
   "/api/applications",
   authMiddleware,
   roleMiddleware(["student"]),
+  upload.array("documents", 5),
+
   async (req, res) => {
     try {
       const {
@@ -732,7 +723,7 @@ app.post(
       }
 
       // ======================================
-      // CHECK SCHOLARSHIP STATUS
+      // CHECK STATUS
       // ======================================
 
       if (scholarship.status !== "active") {
@@ -760,7 +751,7 @@ app.post(
       }
 
       // ======================================
-      // GET STUDENT USER ACCOUNT
+      // GET STUDENT ACCOUNT
       // ======================================
 
       const user = await User.findById(
@@ -795,7 +786,7 @@ app.post(
 
       const eligibilityReasons = [];
 
-      // GPA CHECK
+      // GPA
       if (
         scholarship.minimumGPA > 0 &&
         (profile.gpa === undefined ||
@@ -809,7 +800,7 @@ app.post(
         );
       }
 
-      // ACADEMIC YEAR CHECK
+      // ACADEMIC YEAR
       if (
         scholarship.requiredAcademicYear &&
         profile.academicYear !==
@@ -822,7 +813,7 @@ app.post(
         );
       }
 
-      // COURSE CHECK
+      // COURSE
       if (
         scholarship.requiredCourse &&
         scholarship.requiredCourse.trim() !== ""
@@ -848,14 +839,13 @@ app.post(
       }
 
       // ======================================
-      // REJECT INELIGIBLE STUDENT
+      // REJECT IF NOT ELIGIBLE
       // ======================================
 
       if (eligibilityReasons.length > 0) {
         return res.status(403).json({
           message:
             "You are not eligible to apply for this scholarship.",
-
           reasons: eligibilityReasons,
         });
       }
@@ -875,24 +865,37 @@ app.post(
       }
 
       // ======================================
+      // PREPARE UPLOADED DOCUMENTS
+      // ======================================
+
+      const uploadedDocuments = (
+        req.files || []
+      ).map((file) => ({
+        originalName: file.originalname,
+        fileName: file.filename,
+        filePath: file.path,
+        fileType: file.mimetype,
+        fileSize: file.size,
+      }));
+
+      // ======================================
       // CREATE APPLICATION
       // ======================================
 
       const application = new Application({
         student: req.user.id,
-
         scholarship: scholarshipId,
 
-        // Trusted account information
         fullName: user.fullName,
         email: user.email,
 
-        // Trusted profile information
         university: profile.university,
         course: profile.course,
         academicYear: profile.academicYear,
 
         statement: statement.trim(),
+
+        documents: uploadedDocuments,
 
         status: "submitted",
       });
@@ -902,7 +905,6 @@ app.post(
       res.status(201).json({
         message:
           "Application submitted successfully!",
-
         application,
       });
     } catch (error) {
@@ -1012,7 +1014,8 @@ app.get(
 );
 
 // ==========================================
-// PROVIDER / ADMIN - UPDATE APPLICATION STATUS
+// PROVIDER / ADMIN
+// UPDATE APPLICATION STATUS
 // ==========================================
 
 app.patch(
@@ -1049,7 +1052,7 @@ app.patch(
       }
 
       // Provider can only manage applications
-      // for their own scholarships
+      // belonging to their own scholarships
       if (req.user.role === "provider") {
         const scholarship =
           application.scholarship;
@@ -1074,7 +1077,6 @@ app.patch(
       res.status(200).json({
         message:
           "Application status updated successfully!",
-
         application,
       });
     } catch (error) {
