@@ -77,7 +77,7 @@ app.get(
 
 app.post("/api/users/register", async (req, res) => {
   try {
-    const { fullName, email, password, role } = req.body;
+    const { fullName, email, password } = req.body;
 
     const existingUser = await User.findOne({ email });
 
@@ -89,12 +89,12 @@ app.post("/api/users/register", async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = new User({
-      fullName,
-      email,
-      password: hashedPassword,
-      role: role || "student",
-    });
+const user = new User({
+  fullName,
+  email,
+  password: hashedPassword,
+  role: "student",
+});
 
     await user.save();
 
