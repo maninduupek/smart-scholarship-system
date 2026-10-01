@@ -20,11 +20,11 @@ function ApplicationForm() {
   const [error, setError] = useState("");
 
   // ==========================================
-  // GET SCHOLARSHIP DETAILS
+  // LOAD SCHOLARSHIP + STUDENT PROFILE
   // ==========================================
 
   useEffect(() => {
-    const fetchScholarship = async () => {
+    const loadApplicationData = async () => {
       const token = localStorage.getItem("token");
 
       if (!token) {
@@ -34,7 +34,11 @@ function ApplicationForm() {
       }
 
       try {
-        const response = await fetch(
+        // ------------------------------------------
+        // GET SCHOLARSHIP
+        // ------------------------------------------
+
+        const scholarshipResponse = await fetch(
           `http://localhost:5000/api/scholarships/${id}`,
           {
             method: "GET",
@@ -44,15 +48,61 @@ function ApplicationForm() {
           }
         );
 
-        const data = await response.json();
+        const scholarshipData =
+          await scholarshipResponse.json();
 
-        if (!response.ok) {
-          setError(data.message || "Failed to load scholarship.");
+        if (!scholarshipResponse.ok) {
+          setError(
+            scholarshipData.message ||
+              "Failed to load scholarship."
+          );
+
           setLoading(false);
           return;
         }
 
-        setScholarship(data.scholarship);
+        setScholarship(scholarshipData.scholarship);
+
+        // ------------------------------------------
+        // GET STUDENT PROFILE
+        // ------------------------------------------
+
+        const profileResponse = await fetch(
+          "http://localhost:5000/api/student/profile",
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const profileData = await profileResponse.json();
+
+        if (!profileResponse.ok) {
+          setError(
+            profileData.message ||
+              "Failed to load student profile."
+          );
+
+          setLoading(false);
+          return;
+        }
+
+        // ------------------------------------------
+        // AUTO-FILL APPLICATION FORM
+        // ------------------------------------------
+
+        setFormData({
+          fullName: profileData.user?.fullName || "",
+          email: profileData.user?.email || "",
+          university:
+            profileData.profile?.university || "",
+          course: profileData.profile?.course || "",
+          academicYear:
+            profileData.profile?.academicYear || "",
+          statement: "",
+        });
       } catch (error) {
         setError(
           "Unable to connect to the server. Please make sure the backend is running."
@@ -62,11 +112,11 @@ function ApplicationForm() {
       }
     };
 
-    fetchScholarship();
+    loadApplicationData();
   }, [id]);
 
   // ==========================================
-  // HANDLE INPUT CHANGES
+  // HANDLE FORM CHANGES
   // ==========================================
 
   const handleChange = (e) => {
@@ -89,7 +139,9 @@ function ApplicationForm() {
     const token = localStorage.getItem("token");
 
     if (!token) {
-      setError("Please login before submitting an application.");
+      setError(
+        "Please login before submitting an application."
+      );
       return;
     }
 
@@ -98,17 +150,21 @@ function ApplicationForm() {
         "http://localhost:5000/api/applications",
         {
           method: "POST",
+
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
+
           body: JSON.stringify({
             scholarshipId: id,
             fullName: formData.fullName,
             email: formData.email,
             university: formData.university,
             course: formData.course,
-            academicYear: Number(formData.academicYear),
+            academicYear: Number(
+              formData.academicYear
+            ),
             statement: formData.statement,
           }),
         }
@@ -117,20 +173,22 @@ function ApplicationForm() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.message || "Failed to submit application.");
+        setError(
+          data.message ||
+            "Failed to submit application."
+        );
         return;
       }
 
-      setMessage("Application submitted successfully!");
+      setMessage(
+        "Application submitted successfully!"
+      );
 
-      setFormData({
-        fullName: "",
-        email: "",
-        university: "",
-        course: "",
-        academicYear: "",
+      // Keep profile information but clear statement
+      setFormData((previousData) => ({
+        ...previousData,
         statement: "",
-      });
+      }));
     } catch (error) {
       setError(
         "Unable to connect to the server. Please make sure the backend is running."
@@ -146,13 +204,13 @@ function ApplicationForm() {
     return (
       <main>
         <h1>Apply for Scholarship</h1>
-        <p>Loading scholarship...</p>
+        <p>Loading application information...</p>
       </main>
     );
   }
 
   // ==========================================
-  // ERROR
+  // ERROR BEFORE SCHOLARSHIP LOADS
   // ==========================================
 
   if (error && !scholarship) {
@@ -163,10 +221,6 @@ function ApplicationForm() {
       </main>
     );
   }
-
-  // ==========================================
-  // SCHOLARSHIP NOT FOUND
-  // ==========================================
 
   if (!scholarship) {
     return (
@@ -188,29 +242,24 @@ function ApplicationForm() {
         <h2>{scholarship.title}</h2>
 
         <p>
-          Provided by: {scholarship.provider}
+          <strong>Provided by:</strong>{" "}
+          {scholarship.provider}
         </p>
 
-        {message && (
-          <p>{message}</p>
-        )}
+        {message && <p>{message}</p>}
 
-        {error && (
-          <p>{error}</p>
-        )}
+        {error && <p>{error}</p>}
 
         <form onSubmit={handleSubmit}>
           <div>
             <label>Full Name</label>
-
             <br />
 
             <input
               type="text"
               name="fullName"
               value={formData.fullName}
-              onChange={handleChange}
-              required
+              disabled
             />
           </div>
 
@@ -218,15 +267,13 @@ function ApplicationForm() {
 
           <div>
             <label>Email</label>
-
             <br />
 
             <input
               type="email"
               name="email"
               value={formData.email}
-              onChange={handleChange}
-              required
+              disabled
             />
           </div>
 
@@ -234,31 +281,27 @@ function ApplicationForm() {
 
           <div>
             <label>University</label>
-
             <br />
 
             <input
               type="text"
               name="university"
               value={formData.university}
-              onChange={handleChange}
-              required
+              disabled
             />
           </div>
 
           <br />
 
           <div>
-            <label>Course</label>
-
+            <label>Degree / Course</label>
             <br />
 
             <input
               type="text"
               name="course"
               value={formData.course}
-              onChange={handleChange}
-              required
+              disabled
             />
           </div>
 
@@ -266,17 +309,13 @@ function ApplicationForm() {
 
           <div>
             <label>Academic Year</label>
-
             <br />
 
             <input
               type="number"
               name="academicYear"
               value={formData.academicYear}
-              onChange={handleChange}
-              min="1"
-              max="6"
-              required
+              disabled
             />
           </div>
 
@@ -284,7 +323,6 @@ function ApplicationForm() {
 
           <div>
             <label>Statement of Purpose</label>
-
             <br />
 
             <textarea
@@ -292,6 +330,7 @@ function ApplicationForm() {
               rows="6"
               value={formData.statement}
               onChange={handleChange}
+              placeholder="Explain why you are applying for this scholarship..."
               required
             ></textarea>
           </div>
