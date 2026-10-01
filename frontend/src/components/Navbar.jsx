@@ -22,7 +22,6 @@ function Navbar() {
     localStorage.removeItem("user");
 
     navigate("/login");
-
     window.location.reload();
   };
 
@@ -37,6 +36,10 @@ function Navbar() {
 
         {token && user?.role === "student" && (
           <>
+            <Link to="/profile">
+              My Profile
+            </Link>
+
             <Link to="/scholarships">
               Scholarships
             </Link>

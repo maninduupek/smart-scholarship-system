@@ -17,6 +17,7 @@ import MyScholarships from "./pages/MyScholarships";
 import EditScholarship from "./pages/EditScholarship";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsers from "./pages/AdminUsers";
+import StudentProfile from "./pages/StudentProfile";
 
 import "./App.css";
 
@@ -58,6 +59,15 @@ function App() {
         />
 
         {/* STUDENT ROUTES */}
+
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <StudentProfile />
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/scholarships/:id/apply"

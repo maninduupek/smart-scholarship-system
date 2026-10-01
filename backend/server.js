@@ -7,6 +7,7 @@ const cors = require("cors");
 const User = require("./models/User");
 const Scholarship = require("./models/Scholarship");
 const Application = require("./models/Application");
+const StudentProfile = require("./models/StudentProfile");
 
 const authMiddleware = require("./middleware/authMiddleware");
 const roleMiddleware = require("./middleware/roleMiddleware");
@@ -73,6 +74,7 @@ app.get(
 
 // ==========================================
 // REGISTER USER
+// Public registration always creates student
 // ==========================================
 
 app.post("/api/users/register", async (req, res) => {
@@ -89,12 +91,12 @@ app.post("/api/users/register", async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-const user = new User({
-  fullName,
-  email,
-  password: hashedPassword,
-  role: "student",
-});
+    const user = new User({
+      fullName,
+      email,
+      password: hashedPassword,
+      role: "student",
+    });
 
     await user.save();
 
@@ -171,6 +173,93 @@ app.post("/api/users/login", async (req, res) => {
     });
   }
 });
+
+// ==========================================
+// GET STUDENT PROFILE
+// Student only
+// ==========================================
+
+app.get(
+  "/api/student/profile",
+  authMiddleware,
+  roleMiddleware(["student"]),
+  async (req, res) => {
+    try {
+      const user = await User.findById(req.user.id).select(
+        "fullName email"
+      );
+
+      if (!user) {
+        return res.status(404).json({
+          message: "User not found.",
+        });
+      }
+
+      const profile = await StudentProfile.findOne({
+        student: req.user.id,
+      });
+
+      res.status(200).json({
+        user,
+        profile,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Failed to load student profile.",
+        error: error.message,
+      });
+    }
+  }
+);
+
+// ==========================================
+// CREATE OR UPDATE STUDENT PROFILE
+// Student only
+// ==========================================
+
+app.put(
+  "/api/student/profile",
+  authMiddleware,
+  roleMiddleware(["student"]),
+  async (req, res) => {
+    try {
+      const {
+        university,
+        course,
+        academicYear,
+        gpa,
+      } = req.body;
+
+      const profile = await StudentProfile.findOneAndUpdate(
+        {
+          student: req.user.id,
+        },
+        {
+          student: req.user.id,
+          university,
+          course,
+          academicYear,
+          gpa,
+        },
+        {
+          new: true,
+          upsert: true,
+          runValidators: true,
+        }
+      );
+
+      res.status(200).json({
+        message: "Student profile saved successfully!",
+        profile,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Failed to save student profile.",
+        error: error.message,
+      });
+    }
+  }
+);
 
 // ==========================================
 // ADMIN DASHBOARD STATISTICS
@@ -326,7 +415,7 @@ app.get(
 // Provider/Admin
 //
 // IMPORTANT:
-// This must remain before /api/scholarships/:id
+// Keep this route before /api/scholarships/:id
 // ==========================================
 
 app.get(
