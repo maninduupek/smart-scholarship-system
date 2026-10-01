@@ -33,15 +33,47 @@ const scholarshipSchema = new mongoose.Schema(
       required: true,
     },
 
+    // General eligibility description
     eligibility: {
       type: String,
       required: true,
     },
 
+    // ==========================================
+    // STRUCTURED ELIGIBILITY CRITERIA
+    // ==========================================
+
+    minimumGPA: {
+      type: Number,
+      min: 0,
+      max: 4,
+      default: 0,
+    },
+
+    requiredAcademicYear: {
+      type: Number,
+      min: 1,
+      max: 6,
+      default: null,
+    },
+
+    requiredCourse: {
+      type: String,
+      default: "",
+    },
+
+    // ==========================================
+    // REQUIRED DOCUMENTS
+    // ==========================================
+
     requirements: {
       type: [String],
       default: [],
     },
+
+    // ==========================================
+    // SCHOLARSHIP STATUS
+    // ==========================================
 
     status: {
       type: String,

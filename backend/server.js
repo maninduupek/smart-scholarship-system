@@ -25,76 +25,63 @@ app.use(cors());
 app.use(express.json());
 
 // ==========================================
-// CONNECT TO LOCAL MONGODB
+// DATABASE CONNECTION
 // ==========================================
 
 mongoose
-  .connect("mongodb://127.0.0.1:27017/smartScholarshipDB")
+  .connect(
+    "mongodb://127.0.0.1:27017/smartScholarshipDB"
+  )
   .then(() => {
     console.log("MongoDB connected successfully!");
   })
   .catch((error) => {
-    console.error("MongoDB connection failed:", error);
+    console.error(
+      "MongoDB connection failed:",
+      error
+    );
   });
 
 // ==========================================
-// TEST ROUTE
+// HOME TEST ROUTE
 // ==========================================
 
 app.get("/", (req, res) => {
-  res.send("Smart Scholarship Backend is running!");
+  res.send(
+    "Smart Scholarship System Backend is running!"
+  );
 });
 
 // ==========================================
-// PROTECTED TEST ROUTE
-// ==========================================
-
-app.get("/api/protected", authMiddleware, (req, res) => {
-  res.status(200).json({
-    message: "You accessed a protected route successfully!",
-    user: req.user,
-  });
-});
-
-// ==========================================
-// STUDENT-ONLY TEST ROUTE
-// ==========================================
-
-app.get(
-  "/api/student-test",
-  authMiddleware,
-  roleMiddleware(["student"]),
-  (req, res) => {
-    res.status(200).json({
-      message: "Student access granted!",
-      user: req.user,
-    });
-  }
-);
-
-// ==========================================
-// REGISTER USER
-// Public registration always creates student
+// USER REGISTRATION
 // ==========================================
 
 app.post("/api/users/register", async (req, res) => {
   try {
     const { fullName, email, password } = req.body;
 
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({
+      email,
+    });
 
     if (existingUser) {
       return res.status(400).json({
-        message: "User with this email already exists",
+        message:
+          "User with this email already exists",
       });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(
+      password,
+      10
+    );
 
     const user = new User({
       fullName,
       email,
       password: hashedPassword,
+
+      // Public registration always creates students
       role: "student",
     });
 
@@ -118,28 +105,30 @@ app.post("/api/users/register", async (req, res) => {
 });
 
 // ==========================================
-// LOGIN USER
+// USER LOGIN
 // ==========================================
 
 app.post("/api/users/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({
+      email,
+    });
 
     if (!user) {
-      return res.status(401).json({
+      return res.status(400).json({
         message: "Invalid email or password",
       });
     }
 
-    const isPasswordCorrect = await bcrypt.compare(
+    const passwordMatch = await bcrypt.compare(
       password,
       user.password
     );
 
-    if (!isPasswordCorrect) {
-      return res.status(401).json({
+    if (!passwordMatch) {
+      return res.status(400).json({
         message: "Invalid email or password",
       });
     }
@@ -175,8 +164,7 @@ app.post("/api/users/login", async (req, res) => {
 });
 
 // ==========================================
-// GET STUDENT PROFILE
-// Student only
+// STUDENT PROFILE - GET
 // ==========================================
 
 app.get(
@@ -185,9 +173,9 @@ app.get(
   roleMiddleware(["student"]),
   async (req, res) => {
     try {
-      const user = await User.findById(req.user.id).select(
-        "fullName email"
-      );
+      const user = await User.findById(
+        req.user.id
+      ).select("fullName email");
 
       if (!user) {
         return res.status(404).json({
@@ -195,9 +183,10 @@ app.get(
         });
       }
 
-      const profile = await StudentProfile.findOne({
-        student: req.user.id,
-      });
+      const profile =
+        await StudentProfile.findOne({
+          student: req.user.id,
+        });
 
       res.status(200).json({
         user,
@@ -205,7 +194,8 @@ app.get(
       });
     } catch (error) {
       res.status(500).json({
-        message: "Failed to load student profile.",
+        message:
+          "Failed to load student profile.",
         error: error.message,
       });
     }
@@ -213,8 +203,7 @@ app.get(
 );
 
 // ==========================================
-// CREATE OR UPDATE STUDENT PROFILE
-// Student only
+// STUDENT PROFILE - CREATE / UPDATE
 // ==========================================
 
 app.put(
@@ -230,107 +219,34 @@ app.put(
         gpa,
       } = req.body;
 
-      const profile = await StudentProfile.findOneAndUpdate(
-        {
-          student: req.user.id,
-        },
-        {
-          student: req.user.id,
-          university,
-          course,
-          academicYear,
-          gpa,
-        },
-        {
-          new: true,
-          upsert: true,
-          runValidators: true,
-        }
-      );
+      const profile =
+        await StudentProfile.findOneAndUpdate(
+          {
+            student: req.user.id,
+          },
+          {
+            student: req.user.id,
+            university,
+            course,
+            academicYear,
+            gpa,
+          },
+          {
+            new: true,
+            upsert: true,
+            runValidators: true,
+          }
+        );
 
       res.status(200).json({
-        message: "Student profile saved successfully!",
+        message:
+          "Student profile saved successfully!",
         profile,
       });
     } catch (error) {
       res.status(500).json({
-        message: "Failed to save student profile.",
-        error: error.message,
-      });
-    }
-  }
-);
-
-// ==========================================
-// ADMIN DASHBOARD STATISTICS
-// Admin only
-// ==========================================
-
-app.get(
-  "/api/admin/dashboard",
-  authMiddleware,
-  roleMiddleware(["admin"]),
-  async (req, res) => {
-    try {
-      const [
-        totalUsers,
-        totalStudents,
-        totalProviders,
-        totalScholarships,
-        activeScholarships,
-        closedScholarships,
-        totalApplications,
-      ] = await Promise.all([
-        User.countDocuments(),
-        User.countDocuments({ role: "student" }),
-        User.countDocuments({ role: "provider" }),
-        Scholarship.countDocuments(),
-        Scholarship.countDocuments({ status: "active" }),
-        Scholarship.countDocuments({ status: "closed" }),
-        Application.countDocuments(),
-      ]);
-
-      res.status(200).json({
-        statistics: {
-          totalUsers,
-          totalStudents,
-          totalProviders,
-          totalScholarships,
-          activeScholarships,
-          closedScholarships,
-          totalApplications,
-        },
-      });
-    } catch (error) {
-      res.status(500).json({
-        message: "Failed to load admin dashboard.",
-        error: error.message,
-      });
-    }
-  }
-);
-
-// ==========================================
-// GET ALL USERS
-// Admin only
-// ==========================================
-
-app.get(
-  "/api/admin/users",
-  authMiddleware,
-  roleMiddleware(["admin"]),
-  async (req, res) => {
-    try {
-      const users = await User.find()
-        .select("-password")
-        .sort({ createdAt: -1 });
-
-      res.status(200).json({
-        users,
-      });
-    } catch (error) {
-      res.status(500).json({
-        message: "Failed to fetch users.",
+        message:
+          "Failed to save student profile.",
         error: error.message,
       });
     }
@@ -339,7 +255,7 @@ app.get(
 
 // ==========================================
 // CREATE SCHOLARSHIP
-// Provider/Admin only
+// Provider / Admin
 // ==========================================
 
 app.post(
@@ -355,30 +271,66 @@ app.post(
         amount,
         deadline,
         eligibility,
+
+        // NEW ELIGIBILITY VALUES
+        minimumGPA,
+        requiredAcademicYear,
+        requiredCourse,
+
         requirements,
       } = req.body;
 
       const scholarship = new Scholarship({
         title,
         provider,
+
         providerUser: req.user.id,
+
         description,
-        amount,
+
+        amount: Number(amount),
+
         deadline,
+
         eligibility,
-        requirements,
+
+        // ==================================
+        // STRUCTURED ELIGIBILITY
+        // ==================================
+
+        minimumGPA:
+          minimumGPA === "" ||
+          minimumGPA === undefined
+            ? 0
+            : Number(minimumGPA),
+
+        requiredAcademicYear:
+          requiredAcademicYear === "" ||
+          requiredAcademicYear === undefined ||
+          requiredAcademicYear === null
+            ? null
+            : Number(requiredAcademicYear),
+
+        requiredCourse:
+          requiredCourse || "",
+
+        requirements:
+          requirements || [],
+
         status: "active",
       });
 
       await scholarship.save();
 
       res.status(201).json({
-        message: "Scholarship created successfully!",
+        message:
+          "Scholarship created successfully!",
         scholarship,
       });
     } catch (error) {
       res.status(500).json({
-        message: "Failed to create scholarship.",
+        message:
+          "Failed to create scholarship.",
         error: error.message,
       });
     }
@@ -386,24 +338,33 @@ app.post(
 );
 
 // ==========================================
-// GET ALL ACTIVE SCHOLARSHIPS
+// GET ACTIVE SCHOLARSHIPS
 // ==========================================
 
 app.get(
   "/api/scholarships",
   authMiddleware,
+  roleMiddleware([
+    "student",
+    "provider",
+    "admin",
+  ]),
   async (req, res) => {
     try {
-      const scholarships = await Scholarship.find({
-        status: "active",
-      }).sort({ createdAt: -1 });
+      const scholarships =
+        await Scholarship.find({
+          status: "active",
+        }).sort({
+          createdAt: -1,
+        });
 
       res.status(200).json({
         scholarships,
       });
     } catch (error) {
       res.status(500).json({
-        message: "Failed to fetch scholarships.",
+        message:
+          "Failed to fetch scholarships.",
         error: error.message,
       });
     }
@@ -412,10 +373,7 @@ app.get(
 
 // ==========================================
 // GET PROVIDER'S SCHOLARSHIPS
-// Provider/Admin
-//
-// IMPORTANT:
-// Keep this route before /api/scholarships/:id
+// IMPORTANT: Keep this before /:id
 // ==========================================
 
 app.get(
@@ -427,15 +385,17 @@ app.get(
       let scholarships;
 
       if (req.user.role === "admin") {
-        scholarships = await Scholarship.find().sort({
-          createdAt: -1,
-        });
+        scholarships =
+          await Scholarship.find().sort({
+            createdAt: -1,
+          });
       } else {
-        scholarships = await Scholarship.find({
-          providerUser: req.user.id,
-        }).sort({
-          createdAt: -1,
-        });
+        scholarships =
+          await Scholarship.find({
+            providerUser: req.user.id,
+          }).sort({
+            createdAt: -1,
+          });
       }
 
       res.status(200).json({
@@ -443,7 +403,8 @@ app.get(
       });
     } catch (error) {
       res.status(500).json({
-        message: "Failed to fetch provider scholarships.",
+        message:
+          "Failed to fetch provider scholarships.",
         error: error.message,
       });
     }
@@ -457,11 +418,17 @@ app.get(
 app.get(
   "/api/scholarships/:id",
   authMiddleware,
+  roleMiddleware([
+    "student",
+    "provider",
+    "admin",
+  ]),
   async (req, res) => {
     try {
-      const scholarship = await Scholarship.findById(
-        req.params.id
-      );
+      const scholarship =
+        await Scholarship.findById(
+          req.params.id
+        );
 
       if (!scholarship) {
         return res.status(404).json({
@@ -474,7 +441,8 @@ app.get(
       });
     } catch (error) {
       res.status(500).json({
-        message: "Failed to fetch scholarship.",
+        message:
+          "Failed to fetch scholarship.",
         error: error.message,
       });
     }
@@ -482,8 +450,8 @@ app.get(
 );
 
 // ==========================================
-// EDIT SCHOLARSHIP
-// Provider owns scholarship OR Admin
+// UPDATE SCHOLARSHIP
+// Provider / Admin
 // ==========================================
 
 app.put(
@@ -492,9 +460,10 @@ app.put(
   roleMiddleware(["provider", "admin"]),
   async (req, res) => {
     try {
-      const scholarship = await Scholarship.findById(
-        req.params.id
-      );
+      const scholarship =
+        await Scholarship.findById(
+          req.params.id
+        );
 
       if (!scholarship) {
         return res.status(404).json({
@@ -502,23 +471,17 @@ app.put(
         });
       }
 
-      if (req.user.role === "provider") {
-        if (!scholarship.providerUser) {
-          return res.status(403).json({
-            message:
-              "This scholarship has no provider ownership information.",
-          });
-        }
-
-        if (
+      // Provider can edit only own scholarship
+      if (
+        req.user.role === "provider" &&
+        (!scholarship.providerUser ||
           scholarship.providerUser.toString() !==
-          req.user.id.toString()
-        ) {
-          return res.status(403).json({
-            message:
-              "You do not have permission to edit this scholarship.",
-          });
-        }
+            req.user.id)
+      ) {
+        return res.status(403).json({
+          message:
+            "You can only edit your own scholarships.",
+        });
       }
 
       const {
@@ -528,46 +491,56 @@ app.put(
         amount,
         deadline,
         eligibility,
+
+        // NEW ELIGIBILITY VALUES
+        minimumGPA,
+        requiredAcademicYear,
+        requiredCourse,
+
         requirements,
       } = req.body;
 
-      if (title !== undefined) {
-        scholarship.title = title;
-      }
+      scholarship.title = title;
+      scholarship.provider = provider;
+      scholarship.description = description;
+      scholarship.amount = Number(amount);
+      scholarship.deadline = deadline;
+      scholarship.eligibility = eligibility;
 
-      if (provider !== undefined) {
-        scholarship.provider = provider;
-      }
+      // ==================================
+      // UPDATE STRUCTURED ELIGIBILITY
+      // ==================================
 
-      if (description !== undefined) {
-        scholarship.description = description;
-      }
+      scholarship.minimumGPA =
+        minimumGPA === "" ||
+        minimumGPA === undefined
+          ? 0
+          : Number(minimumGPA);
 
-      if (amount !== undefined) {
-        scholarship.amount = amount;
-      }
+      scholarship.requiredAcademicYear =
+        requiredAcademicYear === "" ||
+        requiredAcademicYear === undefined ||
+        requiredAcademicYear === null
+          ? null
+          : Number(requiredAcademicYear);
 
-      if (deadline !== undefined) {
-        scholarship.deadline = deadline;
-      }
+      scholarship.requiredCourse =
+        requiredCourse || "";
 
-      if (eligibility !== undefined) {
-        scholarship.eligibility = eligibility;
-      }
-
-      if (requirements !== undefined) {
-        scholarship.requirements = requirements;
-      }
+      scholarship.requirements =
+        requirements || [];
 
       await scholarship.save();
 
       res.status(200).json({
-        message: "Scholarship updated successfully!",
+        message:
+          "Scholarship updated successfully!",
         scholarship,
       });
     } catch (error) {
       res.status(500).json({
-        message: "Failed to update scholarship.",
+        message:
+          "Failed to update scholarship.",
         error: error.message,
       });
     }
@@ -576,7 +549,7 @@ app.put(
 
 // ==========================================
 // CHANGE SCHOLARSHIP STATUS
-// Provider owns scholarship OR Admin
+// Close / Reopen
 // ==========================================
 
 app.patch(
@@ -587,17 +560,19 @@ app.patch(
     try {
       const { status } = req.body;
 
-      const allowedStatuses = ["active", "closed"];
-
-      if (!allowedStatuses.includes(status)) {
+      if (
+        !["active", "closed"].includes(status)
+      ) {
         return res.status(400).json({
-          message: "Invalid scholarship status.",
+          message:
+            "Status must be active or closed.",
         });
       }
 
-      const scholarship = await Scholarship.findById(
-        req.params.id
-      );
+      const scholarship =
+        await Scholarship.findById(
+          req.params.id
+        );
 
       if (!scholarship) {
         return res.status(404).json({
@@ -605,23 +580,16 @@ app.patch(
         });
       }
 
-      if (req.user.role === "provider") {
-        if (!scholarship.providerUser) {
-          return res.status(403).json({
-            message:
-              "This scholarship has no provider ownership information.",
-          });
-        }
-
-        if (
+      if (
+        req.user.role === "provider" &&
+        (!scholarship.providerUser ||
           scholarship.providerUser.toString() !==
-          req.user.id.toString()
-        ) {
-          return res.status(403).json({
-            message:
-              "You do not have permission to manage this scholarship.",
-          });
-        }
+            req.user.id)
+      ) {
+        return res.status(403).json({
+          message:
+            "You can only manage your own scholarships.",
+        });
       }
 
       scholarship.status = status;
@@ -629,14 +597,14 @@ app.patch(
       await scholarship.save();
 
       res.status(200).json({
-        message: `Scholarship ${
-          status === "active" ? "reopened" : "closed"
-        } successfully!`,
+        message:
+          "Scholarship status updated successfully!",
         scholarship,
       });
     } catch (error) {
       res.status(500).json({
-        message: "Failed to change scholarship status.",
+        message:
+          "Failed to update scholarship status.",
         error: error.message,
       });
     }
@@ -644,8 +612,7 @@ app.patch(
 );
 
 // ==========================================
-// SUBMIT SCHOLARSHIP APPLICATION
-// Student only
+// STUDENT - SUBMIT APPLICATION
 // ==========================================
 
 app.post(
@@ -664,9 +631,10 @@ app.post(
         statement,
       } = req.body;
 
-      const scholarship = await Scholarship.findById(
-        scholarshipId
-      );
+      const scholarship =
+        await Scholarship.findById(
+          scholarshipId
+        );
 
       if (!scholarship) {
         return res.status(404).json({
@@ -676,14 +644,16 @@ app.post(
 
       if (scholarship.status !== "active") {
         return res.status(400).json({
-          message: "This scholarship is not currently active.",
+          message:
+            "This scholarship is currently closed.",
         });
       }
 
-      const existingApplication = await Application.findOne({
-        student: req.user.id,
-        scholarship: scholarshipId,
-      });
+      const existingApplication =
+        await Application.findOne({
+          student: req.user.id,
+          scholarship: scholarshipId,
+        });
 
       if (existingApplication) {
         return res.status(400).json({
@@ -699,7 +669,7 @@ app.post(
         email,
         university,
         course,
-        academicYear,
+        academicYear: Number(academicYear),
         statement,
         status: "submitted",
       });
@@ -707,12 +677,14 @@ app.post(
       await application.save();
 
       res.status(201).json({
-        message: "Application submitted successfully!",
+        message:
+          "Application submitted successfully!",
         application,
       });
     } catch (error) {
       res.status(500).json({
-        message: "Failed to submit application.",
+        message:
+          "Failed to submit application.",
         error: error.message,
       });
     }
@@ -720,8 +692,7 @@ app.post(
 );
 
 // ==========================================
-// GET MY APPLICATIONS
-// Student only
+// STUDENT - MY APPLICATIONS
 // ==========================================
 
 app.get(
@@ -730,23 +701,22 @@ app.get(
   roleMiddleware(["student"]),
   async (req, res) => {
     try {
-      const applications = await Application.find({
-        student: req.user.id,
-      })
-        .populate(
-          "scholarship",
-          "title provider amount deadline"
-        )
-        .sort({
-          createdAt: -1,
-        });
+      const applications =
+        await Application.find({
+          student: req.user.id,
+        })
+          .populate("scholarship")
+          .sort({
+            createdAt: -1,
+          });
 
       res.status(200).json({
         applications,
       });
     } catch (error) {
       res.status(500).json({
-        message: "Failed to fetch applications.",
+        message:
+          "Failed to fetch your applications.",
         error: error.message,
       });
     }
@@ -754,7 +724,7 @@ app.get(
 );
 
 // ==========================================
-// GET PROVIDER / ADMIN APPLICATIONS
+// PROVIDER / ADMIN - VIEW APPLICATIONS
 // ==========================================
 
 app.get(
@@ -765,20 +735,17 @@ app.get(
     try {
       let applications;
 
+      // Admin can see every application
       if (req.user.role === "admin") {
-        applications = await Application.find()
-          .populate(
-            "student",
-            "fullName email"
-          )
-          .populate(
-            "scholarship",
-            "title provider amount deadline providerUser"
-          )
-          .sort({
-            createdAt: -1,
-          });
+        applications =
+          await Application.find()
+            .populate("student", "fullName email")
+            .populate("scholarship")
+            .sort({
+              createdAt: -1,
+            });
       } else {
+        // Find scholarships owned by provider
         const providerScholarships =
           await Scholarship.find({
             providerUser: req.user.id,
@@ -789,22 +756,20 @@ app.get(
             (scholarship) => scholarship._id
           );
 
-        applications = await Application.find({
-          scholarship: {
-            $in: scholarshipIds,
-          },
-        })
-          .populate(
-            "student",
-            "fullName email"
-          )
-          .populate(
-            "scholarship",
-            "title provider amount deadline providerUser"
-          )
-          .sort({
-            createdAt: -1,
-          });
+        applications =
+          await Application.find({
+            scholarship: {
+              $in: scholarshipIds,
+            },
+          })
+            .populate(
+              "student",
+              "fullName email"
+            )
+            .populate("scholarship")
+            .sort({
+              createdAt: -1,
+            });
       }
 
       res.status(200).json({
@@ -813,7 +778,7 @@ app.get(
     } catch (error) {
       res.status(500).json({
         message:
-          "Failed to fetch provider applications.",
+          "Failed to fetch applications.",
         error: error.message,
       });
     }
@@ -821,8 +786,7 @@ app.get(
 );
 
 // ==========================================
-// UPDATE APPLICATION STATUS
-// Provider owns scholarship OR Admin
+// PROVIDER / ADMIN - UPDATE APPLICATION STATUS
 // ==========================================
 
 app.patch(
@@ -842,13 +806,15 @@ app.patch(
 
       if (!allowedStatuses.includes(status)) {
         return res.status(400).json({
-          message: "Invalid application status.",
+          message:
+            "Invalid application status.",
         });
       }
 
-      const application = await Application.findById(
-        req.params.id
-      ).populate("scholarship");
+      const application =
+        await Application.findById(
+          req.params.id
+        ).populate("scholarship");
 
       if (!application) {
         return res.status(404).json({
@@ -856,30 +822,21 @@ app.patch(
         });
       }
 
-      if (!application.scholarship) {
-        return res.status(404).json({
-          message: "Scholarship not found.",
-        });
-      }
-
+      // Provider can only manage applications
+      // belonging to their own scholarships
       if (req.user.role === "provider") {
-        const providerUser =
-          application.scholarship.providerUser;
-
-        if (!providerUser) {
-          return res.status(403).json({
-            message:
-              "This scholarship has no provider ownership information.",
-          });
-        }
+        const scholarship =
+          application.scholarship;
 
         if (
-          providerUser.toString() !==
-          req.user.id.toString()
+          !scholarship ||
+          !scholarship.providerUser ||
+          scholarship.providerUser.toString() !==
+            req.user.id
         ) {
           return res.status(403).json({
             message:
-              "You do not have permission to manage this application.",
+              "You can only manage applications for your own scholarships.",
           });
         }
       }
@@ -897,6 +854,97 @@ app.patch(
       res.status(500).json({
         message:
           "Failed to update application status.",
+        error: error.message,
+      });
+    }
+  }
+);
+
+// ==========================================
+// ADMIN DASHBOARD
+// ==========================================
+
+app.get(
+  "/api/admin/dashboard",
+  authMiddleware,
+  roleMiddleware(["admin"]),
+  async (req, res) => {
+    try {
+      const [
+        totalUsers,
+        totalStudents,
+        totalProviders,
+        totalScholarships,
+        activeScholarships,
+        closedScholarships,
+        totalApplications,
+      ] = await Promise.all([
+        User.countDocuments(),
+
+        User.countDocuments({
+          role: "student",
+        }),
+
+        User.countDocuments({
+          role: "provider",
+        }),
+
+        Scholarship.countDocuments(),
+
+        Scholarship.countDocuments({
+          status: "active",
+        }),
+
+        Scholarship.countDocuments({
+          status: "closed",
+        }),
+
+        Application.countDocuments(),
+      ]);
+
+      res.status(200).json({
+        statistics: {
+          totalUsers,
+          totalStudents,
+          totalProviders,
+          totalScholarships,
+          activeScholarships,
+          closedScholarships,
+          totalApplications,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        message:
+          "Failed to load admin dashboard.",
+        error: error.message,
+      });
+    }
+  }
+);
+
+// ==========================================
+// ADMIN - VIEW USERS
+// ==========================================
+
+app.get(
+  "/api/admin/users",
+  authMiddleware,
+  roleMiddleware(["admin"]),
+  async (req, res) => {
+    try {
+      const users = await User.find()
+        .select("-password")
+        .sort({
+          createdAt: -1,
+        });
+
+      res.status(200).json({
+        users,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Failed to fetch users.",
         error: error.message,
       });
     }
