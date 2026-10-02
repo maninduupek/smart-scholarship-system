@@ -4586,3 +4586,1147 @@ main {
     flex-direction: column;
   }
 }
+
+/* ==========================================
+   STEP 31.6A - PROVIDER CREATE SCHOLARSHIP
+   ========================================== */
+
+.provider-page {
+  min-height: calc(100vh - 70px);
+  padding: 42px 20px 70px;
+  background: #f8fafc;
+}
+
+.provider-container {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.provider-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 22px;
+  color: #94a3b8;
+  font-size: 0.72rem;
+}
+
+.provider-breadcrumb a {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.provider-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 25px;
+  margin-bottom: 28px;
+}
+
+.provider-page-header h1 {
+  margin: 6px 0 8px;
+  color: #0f172a;
+  font-size: clamp(1.65rem, 3vw, 2.25rem);
+}
+
+.provider-page-header p {
+  max-width: 650px;
+  color: #64748b;
+  font-size: 0.83rem;
+  line-height: 1.65;
+}
+
+.provider-eyebrow {
+  color: #2563eb;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.provider-form-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 24px;
+  align-items: start;
+}
+
+.provider-form-card,
+.provider-guide-card,
+.provider-preview-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 5px 20px rgba(15, 23, 42, 0.04);
+}
+
+.provider-form-card {
+  padding: 32px;
+}
+
+.provider-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 23px;
+}
+
+.provider-section-number {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.provider-section-heading h2 {
+  margin-bottom: 3px;
+  color: #0f172a;
+  font-size: 1.05rem;
+}
+
+.provider-section-heading p {
+  color: #94a3b8;
+  font-size: 0.72rem;
+}
+
+.provider-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 19px;
+}
+
+.provider-full-width {
+  grid-column: 1 / -1;
+}
+
+.provider-form-card .form-group {
+  margin: 0;
+}
+
+.provider-form-card textarea {
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.provider-form-card small {
+  display: block;
+  margin-top: 6px;
+  color: #94a3b8;
+  font-size: 0.67rem;
+  line-height: 1.5;
+}
+
+.provider-field-helper {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  margin-top: 7px;
+  color: #94a3b8;
+  font-size: 0.67rem;
+}
+
+.provider-form-divider {
+  height: 1px;
+  margin: 32px 0;
+  background: #e2e8f0;
+}
+
+.provider-info-box {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 20px;
+  padding: 13px 15px;
+  border-radius: 10px;
+  background: #eff6ff;
+}
+
+.provider-info-box > div {
+  width: 23px;
+  height: 23px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #dbeafe;
+  color: #2563eb;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.provider-info-box p {
+  color: #475569;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.provider-requirements-preview {
+  margin-top: 17px;
+  padding: 17px;
+  border: 1px solid #e2e8f0;
+  border-radius: 11px;
+  background: #f8fafc;
+}
+
+.provider-requirements-preview h3 {
+  margin-bottom: 11px;
+  color: #475569;
+  font-size: 0.76rem;
+}
+
+.provider-requirements-preview > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.provider-requirements-preview span {
+  padding: 6px 9px;
+  border-radius: 7px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.provider-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 11px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.provider-create-button {
+  min-width: 175px;
+}
+
+.provider-success-message {
+  display: flex;
+  gap: 13px;
+  margin-bottom: 22px;
+  padding: 17px;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  background: #f0fdf4;
+}
+
+.provider-message-icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: #15803d;
+  font-weight: 800;
+}
+
+.provider-success-message strong {
+  display: block;
+  margin-bottom: 2px;
+  color: #166534;
+  font-size: 0.8rem;
+}
+
+.provider-success-message p,
+.provider-success-message span {
+  color: #64748b;
+  font-size: 0.7rem;
+}
+
+.provider-form-sidebar {
+  position: sticky;
+  top: 95px;
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+}
+
+.provider-guide-card,
+.provider-preview-card {
+  padding: 22px;
+}
+
+.provider-guide-icon {
+  margin-bottom: 10px;
+  font-size: 1.5rem;
+}
+
+.provider-guide-card h3 {
+  margin-bottom: 7px;
+  color: #0f172a;
+  font-size: 0.9rem;
+}
+
+.provider-guide-card > p {
+  margin-bottom: 18px;
+  color: #64748b;
+  font-size: 0.7rem;
+  line-height: 1.6;
+}
+
+.provider-guide-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.provider-guide-list > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.provider-guide-list span {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 0.63rem;
+  font-weight: 800;
+}
+
+.provider-guide-list p {
+  color: #64748b;
+  font-size: 0.68rem;
+}
+
+.provider-preview-card > span {
+  display: inline-block;
+  margin-bottom: 11px;
+  color: #2563eb;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.provider-preview-card h3 {
+  margin-bottom: 4px;
+  color: #0f172a;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.provider-preview-card > p {
+  color: #64748b;
+  font-size: 0.7rem;
+}
+
+.provider-preview-divider {
+  height: 1px;
+  margin: 17px 0 10px;
+  background: #e2e8f0;
+}
+
+.provider-preview-card > div:not(.provider-preview-divider) {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.provider-preview-card > div span {
+  color: #94a3b8;
+  font-size: 0.65rem;
+}
+
+.provider-preview-card > div strong {
+  max-width: 150px;
+  color: #475569;
+  font-size: 0.67rem;
+  text-align: right;
+}
+
+@media (max-width: 1000px) {
+  .provider-form-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .provider-form-sidebar {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .provider-page {
+    padding: 28px 15px 55px;
+  }
+
+  .provider-page-header {
+    flex-direction: column;
+  }
+
+  .provider-form-card {
+    padding: 23px 18px;
+  }
+
+  .provider-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .provider-full-width {
+    grid-column: auto;
+  }
+
+  .provider-field-helper {
+    flex-direction: column;
+  }
+
+  .provider-form-sidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .provider-form-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .provider-form-actions .btn,
+  .provider-create-button {
+    width: 100%;
+  }
+}
+
+/* ==========================================
+   STEP 31.6B - MY SCHOLARSHIPS
+   ========================================== */
+
+.provider-scholarship-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 35px;
+}
+
+.provider-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 19px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 4px 15px rgba(15, 23, 42, 0.035);
+}
+
+.provider-stat-icon {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.provider-stat-active {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.provider-stat-closed {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.provider-stat-card strong {
+  display: block;
+  color: #0f172a;
+  font-size: 1.35rem;
+}
+
+.provider-stat-card span {
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.provider-list-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.provider-list-heading h2 {
+  margin-bottom: 4px;
+  color: #0f172a;
+  font-size: 1.15rem;
+}
+
+.provider-list-heading p {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.provider-list-heading > span {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 0.67rem;
+  font-weight: 800;
+}
+
+.provider-scholarship-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.provider-scholarship-card {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e2e8f0;
+  border-radius: 17px;
+  background: #ffffff;
+  box-shadow: 0 5px 20px rgba(15, 23, 42, 0.04);
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.provider-scholarship-card:hover {
+  transform: translateY(-2px);
+  border-color: #bfdbfe;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.07);
+}
+
+.provider-scholarship-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 21px 22px 0;
+}
+
+.provider-scholarship-logo {
+  width: 43px;
+  height: 43px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  background: #eff6ff;
+  font-size: 1rem;
+}
+
+.provider-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: 0.64rem;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.provider-status-badge > span {
+  font-size: 0.55rem;
+}
+
+.provider-status-active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.provider-status-closed {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.provider-scholarship-content {
+  flex: 1;
+  padding: 17px 22px 22px;
+}
+
+.provider-scholarship-provider {
+  margin-bottom: 5px;
+  color: #2563eb;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.provider-scholarship-content h2 {
+  margin-bottom: 9px;
+  color: #0f172a;
+  font-size: 1.03rem;
+  line-height: 1.4;
+}
+
+.provider-scholarship-description {
+  display: -webkit-box;
+  overflow: hidden;
+  min-height: 42px;
+  margin-bottom: 19px;
+  color: #64748b;
+  font-size: 0.72rem;
+  line-height: 1.6;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.provider-scholarship-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 11px;
+  margin-bottom: 17px;
+}
+
+.provider-scholarship-details > div {
+  padding: 11px;
+  border-radius: 9px;
+  background: #f8fafc;
+}
+
+.provider-scholarship-details span {
+  display: block;
+  margin-bottom: 3px;
+  color: #94a3b8;
+  font-size: 0.59rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.provider-scholarship-details strong {
+  color: #475569;
+  font-size: 0.7rem;
+}
+
+.provider-card-eligibility {
+  padding-top: 15px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.provider-card-eligibility > span {
+  display: block;
+  margin-bottom: 8px;
+  color: #94a3b8;
+  font-size: 0.61rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.provider-card-eligibility > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.provider-card-eligibility > div span {
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.provider-scholarship-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid #e2e8f0;
+  background: #fcfdff;
+}
+
+.provider-card-action {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  border-right: 1px solid #e2e8f0;
+  border-radius: 0;
+  background: transparent;
+  color: #475569;
+  font-family: inherit;
+  font-size: 0.67rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.provider-card-action:last-child {
+  border-right: 0;
+}
+
+.provider-card-action:hover {
+  background: #f8fafc;
+  color: #2563eb;
+}
+
+.provider-card-action:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.provider-close-action {
+  color: #b91c1c;
+}
+
+.provider-close-action:hover {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.provider-reopen-action {
+  color: #15803d;
+}
+
+.provider-reopen-action:hover {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.provider-empty-state {
+  max-width: 620px;
+  margin: 50px auto;
+  padding: 55px 30px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 18px;
+  background: #ffffff;
+  text-align: center;
+}
+
+.provider-empty-icon {
+  margin-bottom: 14px;
+  font-size: 2.2rem;
+}
+
+.provider-empty-state h2 {
+  margin-bottom: 8px;
+  color: #0f172a;
+  font-size: 1.15rem;
+}
+
+.provider-empty-state p {
+  max-width: 440px;
+  margin: 0 auto 22px;
+  color: #64748b;
+  font-size: 0.78rem;
+  line-height: 1.7;
+}
+
+@media (max-width: 800px) {
+  .provider-scholarship-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 650px) {
+  .provider-scholarship-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .provider-list-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .provider-scholarship-details {
+    grid-template-columns: 1fr;
+  }
+
+  .provider-scholarship-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .provider-card-action {
+    border-right: 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .provider-card-action:last-child {
+    border-bottom: 0;
+  }
+}
+
+/* ==========================================
+   STEP 31.6D - PROVIDER APPLICATIONS
+   ========================================== */
+
+.provider-application-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 34px;
+}
+
+.provider-app-stat-card {
+  padding: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 4px 15px rgba(15, 23, 42, 0.035);
+}
+
+.provider-app-stat-card > span {
+  display: block;
+  margin-bottom: 8px;
+  color: #64748b;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.provider-app-stat-card strong {
+  display: block;
+  margin-bottom: 3px;
+  color: #0f172a;
+  font-size: 1.55rem;
+}
+
+.provider-app-stat-card p {
+  color: #94a3b8;
+  font-size: 0.65rem;
+}
+
+.provider-applications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.provider-application-card {
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 5px 20px rgba(15, 23, 42, 0.04);
+}
+
+.provider-application-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 25px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fcfdff;
+}
+
+.provider-application-label {
+  display: block;
+  margin-bottom: 5px;
+  color: #2563eb;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.provider-application-top h2 {
+  margin-bottom: 4px;
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+.provider-application-top p {
+  color: #64748b;
+  font-size: 0.7rem;
+}
+
+.provider-application-status {
+  flex-shrink: 0;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 0.63rem;
+  font-weight: 800;
+}
+
+.provider-app-status-submitted {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.provider-app-status-review {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.provider-app-status-selected {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.provider-app-status-rejected {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.provider-application-body {
+  padding: 25px;
+}
+
+.provider-applicant-section + .provider-applicant-section {
+  margin-top: 27px;
+  padding-top: 25px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.provider-app-section-title {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 16px;
+}
+
+.provider-app-section-title > div:first-child {
+  width: 35px;
+  height: 35px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: #eff6ff;
+  font-size: 0.8rem;
+}
+
+.provider-app-section-title h3 {
+  margin-bottom: 2px;
+  color: #0f172a;
+  font-size: 0.82rem;
+}
+
+.provider-app-section-title p {
+  color: #94a3b8;
+  font-size: 0.64rem;
+}
+
+.provider-applicant-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 11px;
+}
+
+.provider-applicant-grid > div {
+  padding: 12px;
+  border-radius: 9px;
+  background: #f8fafc;
+}
+
+.provider-applicant-grid span {
+  display: block;
+  margin-bottom: 4px;
+  color: #94a3b8;
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.provider-applicant-grid strong {
+  display: block;
+  overflow-wrap: anywhere;
+  color: #475569;
+  font-size: 0.69rem;
+  line-height: 1.4;
+}
+
+.provider-statement-box {
+  padding: 17px;
+  border-left: 3px solid #2563eb;
+  border-radius: 0 9px 9px 0;
+  background: #f8fafc;
+}
+
+.provider-statement-box p {
+  color: #475569;
+  font-size: 0.72rem;
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+
+.provider-documents-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.provider-document-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.provider-document-icon {
+  width: 35px;
+  height: 35px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #f1f5f9;
+  font-size: 0.85rem;
+}
+
+.provider-document-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.provider-document-info strong {
+  display: block;
+  overflow: hidden;
+  margin-bottom: 2px;
+  color: #334155;
+  font-size: 0.67rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.provider-document-info span {
+  color: #94a3b8;
+  font-size: 0.59rem;
+}
+
+.provider-document-button {
+  padding: 6px 9px;
+  border: 1px solid #bfdbfe;
+  border-radius: 7px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-family: inherit;
+  font-size: 0.61rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.provider-document-button:hover {
+  background: #dbeafe;
+}
+
+.provider-document-button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.provider-no-documents {
+  padding: 15px;
+  border-radius: 9px;
+  background: #f8fafc;
+  color: #94a3b8;
+  font-size: 0.68rem;
+  text-align: center;
+}
+
+.provider-review-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 25px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.provider-review-info > span {
+  display: block;
+  margin-bottom: 3px;
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.provider-review-info p {
+  color: #94a3b8;
+  font-size: 0.62rem;
+}
+
+.provider-review-controls {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.provider-review-controls select {
+  min-width: 145px;
+  margin: 0;
+}
+
+.provider-review-controls .btn {
+  min-width: 115px;
+}
+
+@media (max-width: 900px) {
+  .provider-application-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .provider-applicant-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .provider-documents-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 650px) {
+  .provider-application-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .provider-application-top {
+    flex-direction: column;
+  }
+
+  .provider-applicant-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .provider-review-panel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .provider-review-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .provider-review-controls select,
+  .provider-review-controls .btn {
+    width: 100%;
+  }
+}
