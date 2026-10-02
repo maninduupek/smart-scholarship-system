@@ -26,7 +26,7 @@ const JWT_SECRET = "smart-scholarship-secret-key";
 app.use(cors());
 app.use(express.json());
 
-// Make uploaded documents accessible
+// Uploaded documents
 app.use(
   "/uploads",
   express.static(path.join(__dirname, "uploads"))
@@ -71,7 +71,10 @@ app.post("/api/users/register", async (req, res) => {
       });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(
+      password,
+      10
+    );
 
     const user = new User({
       fullName,
@@ -168,9 +171,9 @@ app.get(
   roleMiddleware(["student"]),
   async (req, res) => {
     try {
-      const user = await User.findById(req.user.id).select(
-        "fullName email"
-      );
+      const user = await User.findById(
+        req.user.id
+      ).select("fullName email");
 
       if (!user) {
         return res.status(404).json({
@@ -178,9 +181,10 @@ app.get(
         });
       }
 
-      const profile = await StudentProfile.findOne({
-        student: req.user.id,
-      });
+      const profile =
+        await StudentProfile.findOne({
+          student: req.user.id,
+        });
 
       res.status(200).json({
         user,
@@ -188,7 +192,8 @@ app.get(
       });
     } catch (error) {
       res.status(500).json({
-        message: "Failed to load student profile.",
+        message:
+          "Failed to load student profile.",
         error: error.message,
       });
     }
@@ -232,12 +237,14 @@ app.put(
         );
 
       res.status(200).json({
-        message: "Student profile saved successfully!",
+        message:
+          "Student profile saved successfully!",
         profile,
       });
     } catch (error) {
       res.status(500).json({
-        message: "Failed to save student profile.",
+        message:
+          "Failed to save student profile.",
         error: error.message,
       });
     }
@@ -246,7 +253,6 @@ app.put(
 
 // ==========================================
 // CREATE SCHOLARSHIP
-// PROVIDER / ADMIN
 // ==========================================
 
 app.post(
@@ -271,10 +277,15 @@ app.post(
       const scholarship = new Scholarship({
         title,
         provider,
+
         providerUser: req.user.id,
+
         description,
+
         amount: Number(amount),
+
         deadline,
+
         eligibility,
 
         minimumGPA:
@@ -290,9 +301,11 @@ app.post(
             ? null
             : Number(requiredAcademicYear),
 
-        requiredCourse: requiredCourse || "",
+        requiredCourse:
+          requiredCourse || "",
 
-        requirements: requirements || [],
+        requirements:
+          requirements || [],
 
         status: "active",
       });
@@ -300,12 +313,14 @@ app.post(
       await scholarship.save();
 
       res.status(201).json({
-        message: "Scholarship created successfully!",
+        message:
+          "Scholarship created successfully!",
         scholarship,
       });
     } catch (error) {
       res.status(500).json({
-        message: "Failed to create scholarship.",
+        message:
+          "Failed to create scholarship.",
         error: error.message,
       });
     }
@@ -338,7 +353,8 @@ app.get(
       });
     } catch (error) {
       res.status(500).json({
-        message: "Failed to fetch scholarships.",
+        message:
+          "Failed to fetch scholarships.",
         error: error.message,
       });
     }
@@ -395,7 +411,9 @@ app.get(
   async (req, res) => {
     try {
       const scholarship =
-        await Scholarship.findById(req.params.id);
+        await Scholarship.findById(
+          req.params.id
+        );
 
       if (!scholarship) {
         return res.status(404).json({
@@ -422,7 +440,8 @@ app.get(
         scholarship.minimumGPA > 0 &&
         (profile.gpa === undefined ||
           profile.gpa === null ||
-          profile.gpa < scholarship.minimumGPA)
+          profile.gpa <
+            scholarship.minimumGPA)
       ) {
         reasons.push(
           `Minimum GPA required is ${scholarship.minimumGPA}. Your GPA is ${
@@ -439,7 +458,8 @@ app.get(
       ) {
         reasons.push(
           `Required academic year is Year ${scholarship.requiredAcademicYear}. Your academic year is Year ${
-            profile.academicYear ?? "not provided"
+            profile.academicYear ??
+            "not provided"
           }.`
         );
       }
@@ -447,7 +467,8 @@ app.get(
       // COURSE CHECK
       if (
         scholarship.requiredCourse &&
-        scholarship.requiredCourse.trim() !== ""
+        scholarship.requiredCourse.trim() !==
+          ""
       ) {
         const studentCourse = (
           profile.course || ""
@@ -460,16 +481,20 @@ app.get(
             .trim()
             .toLowerCase();
 
-        if (studentCourse !== requiredCourse) {
+        if (
+          studentCourse !== requiredCourse
+        ) {
           reasons.push(
             `Required course is ${scholarship.requiredCourse}. Your course is ${
-              profile.course || "not provided"
+              profile.course ||
+              "not provided"
             }.`
           );
         }
       }
 
-      const eligible = reasons.length === 0;
+      const eligible =
+        reasons.length === 0;
 
       res.status(200).json({
         eligible,
@@ -481,10 +506,17 @@ app.get(
         reasons,
 
         studentProfile: {
-          university: profile.university,
-          course: profile.course,
-          academicYear: profile.academicYear,
-          gpa: profile.gpa,
+          university:
+            profile.university,
+
+          course:
+            profile.course,
+
+          academicYear:
+            profile.academicYear,
+
+          gpa:
+            profile.gpa,
         },
 
         scholarshipCriteria: {
@@ -495,7 +527,8 @@ app.get(
             scholarship.requiredAcademicYear,
 
           requiredCourse:
-            scholarship.requiredCourse || "",
+            scholarship.requiredCourse ||
+            "",
         },
       });
     } catch (error) {
@@ -523,7 +556,9 @@ app.get(
   async (req, res) => {
     try {
       const scholarship =
-        await Scholarship.findById(req.params.id);
+        await Scholarship.findById(
+          req.params.id
+        );
 
       if (!scholarship) {
         return res.status(404).json({
@@ -536,7 +571,8 @@ app.get(
       });
     } catch (error) {
       res.status(500).json({
-        message: "Failed to fetch scholarship.",
+        message:
+          "Failed to fetch scholarship.",
         error: error.message,
       });
     }
@@ -544,7 +580,7 @@ app.get(
 );
 
 // ==========================================
-// UPDATE SCHOLARSHIP
+// UPDATE SCHOLARSHIP - SAFE VERSION
 // ==========================================
 
 app.put(
@@ -554,7 +590,9 @@ app.put(
   async (req, res) => {
     try {
       const scholarship =
-        await Scholarship.findById(req.params.id);
+        await Scholarship.findById(
+          req.params.id
+        );
 
       if (!scholarship) {
         return res.status(404).json({
@@ -562,6 +600,7 @@ app.put(
         });
       }
 
+      // Provider can only edit own scholarship
       if (
         req.user.role === "provider" &&
         (!scholarship.providerUser ||
@@ -587,41 +626,89 @@ app.put(
         requirements,
       } = req.body;
 
-      scholarship.title = title;
-      scholarship.provider = provider;
-      scholarship.description = description;
-      scholarship.amount = Number(amount);
-      scholarship.deadline = deadline;
-      scholarship.eligibility = eligibility;
+      // ======================================
+      // BASIC INFORMATION
+      // ======================================
 
-      scholarship.minimumGPA =
-        minimumGPA === "" ||
-        minimumGPA === undefined
-          ? 0
-          : Number(minimumGPA);
+      if (title !== undefined) {
+        scholarship.title = title;
+      }
 
-      scholarship.requiredAcademicYear =
-        requiredAcademicYear === "" ||
-        requiredAcademicYear === undefined ||
-        requiredAcademicYear === null
-          ? null
-          : Number(requiredAcademicYear);
+      if (provider !== undefined) {
+        scholarship.provider = provider;
+      }
 
-      scholarship.requiredCourse =
-        requiredCourse || "";
+      if (description !== undefined) {
+        scholarship.description =
+          description;
+      }
 
-      scholarship.requirements =
-        requirements || [];
+      if (amount !== undefined) {
+        scholarship.amount =
+          Number(amount);
+      }
+
+      if (deadline !== undefined) {
+        scholarship.deadline =
+          deadline;
+      }
+
+      if (eligibility !== undefined) {
+        scholarship.eligibility =
+          eligibility;
+      }
+
+      // ======================================
+      // STRUCTURED ELIGIBILITY
+      // ======================================
+
+      if (minimumGPA !== undefined) {
+        scholarship.minimumGPA =
+          minimumGPA === ""
+            ? 0
+            : Number(minimumGPA);
+      }
+
+      if (
+        requiredAcademicYear !==
+        undefined
+      ) {
+        scholarship.requiredAcademicYear =
+          requiredAcademicYear === "" ||
+          requiredAcademicYear === null
+            ? null
+            : Number(
+                requiredAcademicYear
+              );
+      }
+
+      if (
+        requiredCourse !== undefined
+      ) {
+        scholarship.requiredCourse =
+          requiredCourse.trim();
+      }
+
+      // ======================================
+      // REQUIREMENTS
+      // ======================================
+
+      if (requirements !== undefined) {
+        scholarship.requirements =
+          requirements;
+      }
 
       await scholarship.save();
 
       res.status(200).json({
-        message: "Scholarship updated successfully!",
+        message:
+          "Scholarship updated successfully!",
         scholarship,
       });
     } catch (error) {
       res.status(500).json({
-        message: "Failed to update scholarship.",
+        message:
+          "Failed to update scholarship.",
         error: error.message,
       });
     }
@@ -641,7 +728,9 @@ app.patch(
       const { status } = req.body;
 
       if (
-        !["active", "closed"].includes(status)
+        !["active", "closed"].includes(
+          status
+        )
       ) {
         return res.status(400).json({
           message:
@@ -650,7 +739,9 @@ app.patch(
       }
 
       const scholarship =
-        await Scholarship.findById(req.params.id);
+        await Scholarship.findById(
+          req.params.id
+        );
 
       if (!scholarship) {
         return res.status(404).json({
@@ -707,9 +798,7 @@ app.post(
         statement,
       } = req.body;
 
-      // ======================================
       // FIND SCHOLARSHIP
-      // ======================================
 
       const scholarship =
         await Scholarship.findById(
@@ -722,20 +811,18 @@ app.post(
         });
       }
 
-      // ======================================
-      // CHECK STATUS
-      // ======================================
+      // CHECK SCHOLARSHIP STATUS
 
-      if (scholarship.status !== "active") {
+      if (
+        scholarship.status !== "active"
+      ) {
         return res.status(400).json({
           message:
             "This scholarship is currently closed.",
         });
       }
 
-      // ======================================
       // CHECK DUPLICATE APPLICATION
-      // ======================================
 
       const existingApplication =
         await Application.findOne({
@@ -750,9 +837,7 @@ app.post(
         });
       }
 
-      // ======================================
       // GET STUDENT ACCOUNT
-      // ======================================
 
       const user = await User.findById(
         req.user.id
@@ -760,13 +845,12 @@ app.post(
 
       if (!user) {
         return res.status(404).json({
-          message: "Student account not found.",
+          message:
+            "Student account not found.",
         });
       }
 
-      // ======================================
       // GET STUDENT PROFILE
-      // ======================================
 
       const profile =
         await StudentProfile.findOne({
@@ -791,7 +875,8 @@ app.post(
         scholarship.minimumGPA > 0 &&
         (profile.gpa === undefined ||
           profile.gpa === null ||
-          profile.gpa < scholarship.minimumGPA)
+          profile.gpa <
+            scholarship.minimumGPA)
       ) {
         eligibilityReasons.push(
           `Minimum GPA required is ${scholarship.minimumGPA}. Your GPA is ${
@@ -808,7 +893,8 @@ app.post(
       ) {
         eligibilityReasons.push(
           `Required academic year is Year ${scholarship.requiredAcademicYear}. Your academic year is Year ${
-            profile.academicYear ?? "not provided"
+            profile.academicYear ??
+            "not provided"
           }.`
         );
       }
@@ -816,7 +902,8 @@ app.post(
       // COURSE
       if (
         scholarship.requiredCourse &&
-        scholarship.requiredCourse.trim() !== ""
+        scholarship.requiredCourse.trim() !==
+          ""
       ) {
         const studentCourse = (
           profile.course || ""
@@ -829,24 +916,27 @@ app.post(
             .trim()
             .toLowerCase();
 
-        if (studentCourse !== requiredCourse) {
+        if (
+          studentCourse !== requiredCourse
+        ) {
           eligibilityReasons.push(
             `Required course is ${scholarship.requiredCourse}. Your course is ${
-              profile.course || "not provided"
+              profile.course ||
+              "not provided"
             }.`
           );
         }
       }
 
-      // ======================================
-      // REJECT IF NOT ELIGIBLE
-      // ======================================
-
-      if (eligibilityReasons.length > 0) {
+      if (
+        eligibilityReasons.length > 0
+      ) {
         return res.status(403).json({
           message:
             "You are not eligible to apply for this scholarship.",
-          reasons: eligibilityReasons,
+
+          reasons:
+            eligibilityReasons,
         });
       }
 
@@ -871,47 +961,74 @@ app.post(
       const uploadedDocuments = (
         req.files || []
       ).map((file) => ({
-        originalName: file.originalname,
-        fileName: file.filename,
-        filePath: file.path,
-        fileType: file.mimetype,
-        fileSize: file.size,
+        originalName:
+          file.originalname,
+
+        fileName:
+          file.filename,
+
+        filePath:
+          file.path,
+
+        fileType:
+          file.mimetype,
+
+        fileSize:
+          file.size,
       }));
 
       // ======================================
       // CREATE APPLICATION
       // ======================================
 
-      const application = new Application({
-        student: req.user.id,
-        scholarship: scholarshipId,
+      const application =
+        new Application({
+          student:
+            req.user.id,
 
-        fullName: user.fullName,
-        email: user.email,
+          scholarship:
+            scholarshipId,
 
-        university: profile.university,
-        course: profile.course,
-        academicYear: profile.academicYear,
+          fullName:
+            user.fullName,
 
-        statement: statement.trim(),
+          email:
+            user.email,
 
-        documents: uploadedDocuments,
+          university:
+            profile.university,
 
-        status: "submitted",
-      });
+          course:
+            profile.course,
+
+          academicYear:
+            profile.academicYear,
+
+          statement:
+            statement.trim(),
+
+          documents:
+            uploadedDocuments,
+
+          status:
+            "submitted",
+        });
 
       await application.save();
 
       res.status(201).json({
         message:
           "Application submitted successfully!",
+
         application,
       });
     } catch (error) {
       res.status(500).json({
         message:
           "Failed to submit application.",
-        error: error.message,
+
+        error:
+          error.message,
       });
     }
   }
@@ -968,14 +1085,17 @@ app.get(
               "student",
               "fullName email"
             )
-            .populate("scholarship")
+            .populate(
+              "scholarship"
+            )
             .sort({
               createdAt: -1,
             });
       } else {
         const providerScholarships =
           await Scholarship.find({
-            providerUser: req.user.id,
+            providerUser:
+              req.user.id,
           }).select("_id");
 
         const scholarshipIds =
@@ -987,14 +1107,17 @@ app.get(
         applications =
           await Application.find({
             scholarship: {
-              $in: scholarshipIds,
+              $in:
+                scholarshipIds,
             },
           })
             .populate(
               "student",
               "fullName email"
             )
-            .populate("scholarship")
+            .populate(
+              "scholarship"
+            )
             .sort({
               createdAt: -1,
             });
@@ -1033,7 +1156,9 @@ app.patch(
         "rejected",
       ];
 
-      if (!allowedStatuses.includes(status)) {
+      if (
+        !allowedStatuses.includes(status)
+      ) {
         return res.status(400).json({
           message:
             "Invalid application status.",
@@ -1047,13 +1172,17 @@ app.patch(
 
       if (!application) {
         return res.status(404).json({
-          message: "Application not found.",
+          message:
+            "Application not found.",
         });
       }
 
       // Provider can only manage applications
       // belonging to their own scholarships
-      if (req.user.role === "provider") {
+
+      if (
+        req.user.role === "provider"
+      ) {
         const scholarship =
           application.scholarship;
 
@@ -1077,13 +1206,16 @@ app.patch(
       res.status(200).json({
         message:
           "Application status updated successfully!",
+
         application,
       });
     } catch (error) {
       res.status(500).json({
         message:
           "Failed to update application status.",
-        error: error.message,
+
+        error:
+          error.message,
       });
     }
   }
@@ -1146,7 +1278,9 @@ app.get(
       res.status(500).json({
         message:
           "Failed to load admin dashboard.",
-        error: error.message,
+
+        error:
+          error.message,
       });
     }
   }
@@ -1162,19 +1296,23 @@ app.get(
   roleMiddleware(["admin"]),
   async (req, res) => {
     try {
-      const users = await User.find()
-        .select("-password")
-        .sort({
-          createdAt: -1,
-        });
+      const users =
+        await User.find()
+          .select("-password")
+          .sort({
+            createdAt: -1,
+          });
 
       res.status(200).json({
         users,
       });
     } catch (error) {
       res.status(500).json({
-        message: "Failed to fetch users.",
-        error: error.message,
+        message:
+          "Failed to fetch users.",
+
+        error:
+          error.message,
       });
     }
   }
