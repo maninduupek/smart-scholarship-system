@@ -29,7 +29,6 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 // ==========================================
 // UPLOADED FILE CLEANUP HELPER
-// STEP 30.7
 // ==========================================
 
 const cleanupUploadedFiles = (files = []) => {
@@ -56,14 +55,22 @@ const cleanupUploadedFiles = (files = []) => {
 };
 
 // ==========================================
+// OBJECT ID VALIDATION HELPER
+// STEP 30.8
+// ==========================================
+
+const isValidObjectId = (id) => {
+  return mongoose.Types.ObjectId.isValid(id);
+};
+
+// ==========================================
 // MIDDLEWARE
 // ==========================================
 
 app.use(cors());
 app.use(express.json());
 
-// IMPORTANT:
-// uploads folder is NOT publicly exposed.
+// Uploaded documents are NOT publicly exposed.
 
 // ==========================================
 // DATABASE CONNECTION
@@ -116,17 +123,15 @@ app.post(
         });
       }
 
-      fullName =
-        fullName.trim();
+      fullName = String(
+        fullName
+      ).trim();
 
-      email =
-        email
-          .trim()
-          .toLowerCase();
+      email = String(email)
+        .trim()
+        .toLowerCase();
 
-      if (
-        fullName.length < 2
-      ) {
+      if (fullName.length < 2) {
         return res.status(400).json({
           message:
             "Please enter a valid full name.",
@@ -146,7 +151,8 @@ app.post(
       }
 
       if (
-        password.length < 6
+        String(password).length <
+        6
       ) {
         return res.status(400).json({
           message:
@@ -172,17 +178,16 @@ app.post(
           10
         );
 
-      const user =
-        new User({
-          fullName,
-          email,
-          password:
-            hashedPassword,
+      const user = new User({
+        fullName,
+        email,
+        password:
+          hashedPassword,
 
-          // Public registration
-          // can only create students.
-          role: "student",
-        });
+        // Public registration can
+        // only create students.
+        role: "student",
+      });
 
       await user.save();
 
@@ -239,10 +244,9 @@ app.post(
         });
       }
 
-      email =
-        email
-          .trim()
-          .toLowerCase();
+      email = String(email)
+        .trim()
+        .toLowerCase();
 
       const emailPattern =
         /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -281,23 +285,19 @@ app.post(
         });
       }
 
-      const token =
-        jwt.sign(
-          {
-            id: user._id,
-            email:
-              user.email,
-            role:
-              user.role,
-          },
+      const token = jwt.sign(
+        {
+          id: user._id,
+          email: user.email,
+          role: user.role,
+        },
 
-          JWT_SECRET,
+        JWT_SECRET,
 
-          {
-            expiresIn:
-              "1h",
-          }
-        );
+        {
+          expiresIn: "1h",
+        }
+      );
 
       return res.status(200).json({
         message:
@@ -369,11 +369,14 @@ app.get(
         profile,
       });
     } catch (error) {
+      console.error(
+        "Student profile load error:",
+        error
+      );
+
       return res.status(500).json({
         message:
           "Failed to load student profile.",
-        error:
-          error.message,
       });
     }
   }
@@ -421,15 +424,13 @@ app.put(
         });
       }
 
-      university =
-        String(
-          university
-        ).trim();
+      university = String(
+        university
+      ).trim();
 
-      course =
-        String(
-          course
-        ).trim();
+      course = String(
+        course
+      ).trim();
 
       if (!university) {
         return res.status(400).json({
@@ -467,10 +468,8 @@ app.put(
         !Number.isInteger(
           academicYearNumber
         ) ||
-        academicYearNumber <
-          1 ||
-        academicYearNumber >
-          6
+        academicYearNumber < 1 ||
+        academicYearNumber > 6
       ) {
         return res.status(400).json({
           message:
@@ -501,9 +500,7 @@ app.put(
           {
             student:
               req.user.id,
-
             university,
-
             course,
 
             academicYear:
@@ -570,7 +567,6 @@ app.post(
         requirements,
       } = req.body;
 
-      // Required fields
       if (
         !title ||
         !provider ||
@@ -584,25 +580,21 @@ app.post(
         });
       }
 
-      title =
-        String(
-          title
-        ).trim();
+      title = String(
+        title
+      ).trim();
 
-      provider =
-        String(
-          provider
-        ).trim();
+      provider = String(
+        provider
+      ).trim();
 
-      description =
-        String(
-          description
-        ).trim();
+      description = String(
+        description
+      ).trim();
 
-      eligibility =
-        String(
-          eligibility
-        ).trim();
+      eligibility = String(
+        eligibility
+      ).trim();
 
       requiredCourse =
         requiredCourse
@@ -639,10 +631,12 @@ app.post(
         });
       }
 
-      // Amount
+      // ======================================
+      // AMOUNT VALIDATION
+      // ======================================
+
       if (
-        amount ===
-          undefined ||
+        amount === undefined ||
         amount === null ||
         amount === ""
       ) {
@@ -667,7 +661,10 @@ app.post(
         });
       }
 
-      // Deadline
+      // ======================================
+      // DEADLINE VALIDATION
+      // ======================================
+
       const deadlineDate =
         new Date(
           deadline
@@ -704,7 +701,10 @@ app.post(
         });
       }
 
-      // GPA
+      // ======================================
+      // GPA VALIDATION
+      // ======================================
+
       let minimumGPANumber =
         0;
 
@@ -736,7 +736,10 @@ app.post(
         }
       }
 
-      // Academic year
+      // ======================================
+      // ACADEMIC YEAR VALIDATION
+      // ======================================
+
       let academicYearNumber =
         null;
 
@@ -769,7 +772,10 @@ app.post(
         }
       }
 
-      // Requirements
+      // ======================================
+      // REQUIREMENTS
+      // ======================================
+
       let cleanedRequirements =
         [];
 
@@ -812,7 +818,6 @@ app.post(
       const scholarship =
         new Scholarship({
           title,
-
           provider,
 
           providerUser:
@@ -895,19 +900,21 @@ app.get(
         scholarships,
       });
     } catch (error) {
+      console.error(
+        "Scholarship list error:",
+        error
+      );
+
       return res.status(500).json({
         message:
           "Failed to fetch scholarships.",
-
-        error:
-          error.message,
       });
     }
   }
 );
 
 // ==========================================
-// PROVIDER / ADMIN - OWN SCHOLARSHIPS
+// PROVIDER / ADMIN - MANAGE SCHOLARSHIPS
 // ==========================================
 
 app.get(
@@ -948,12 +955,14 @@ app.get(
         scholarships,
       });
     } catch (error) {
+      console.error(
+        "Provider scholarship load error:",
+        error
+      );
+
       return res.status(500).json({
         message:
           "Failed to fetch provider scholarships.",
-
-        error:
-          error.message,
       });
     }
   }
@@ -961,6 +970,7 @@ app.get(
 
 // ==========================================
 // STUDENT - CHECK ELIGIBILITY
+// STEP 30.8
 // ==========================================
 
 app.get(
@@ -974,6 +984,21 @@ app.get(
 
   async (req, res) => {
     try {
+      // ======================================
+      // ID VALIDATION
+      // ======================================
+
+      if (
+        !isValidObjectId(
+          req.params.id
+        )
+      ) {
+        return res.status(400).json({
+          message:
+            "Invalid scholarship ID.",
+        });
+      }
+
       const scholarship =
         await Scholarship.findById(
           req.params.id
@@ -986,13 +1011,32 @@ app.get(
         });
       }
 
+      // ======================================
+      // STATUS
+      // ======================================
+
       if (
         scholarship.status !==
         "active"
       ) {
-        return res.status(400).json({
+        return res.status(403).json({
           message:
             "This scholarship is currently closed.",
+        });
+      }
+
+      // ======================================
+      // DEADLINE
+      // ======================================
+
+      if (
+        new Date(
+          scholarship.deadline
+        ) < new Date()
+      ) {
+        return res.status(403).json({
+          message:
+            "The application deadline for this scholarship has passed.",
         });
       }
 
@@ -1009,10 +1053,12 @@ app.get(
         });
       }
 
-      const reasons =
-        [];
+      const reasons = [];
 
+      // ======================================
       // GPA
+      // ======================================
+
       if (
         scholarship.minimumGPA >
           0 &&
@@ -1033,7 +1079,10 @@ app.get(
         );
       }
 
-      // Academic year
+      // ======================================
+      // ACADEMIC YEAR
+      // ======================================
+
       if (
         scholarship.requiredAcademicYear &&
         profile.academicYear !==
@@ -1047,7 +1096,10 @@ app.get(
         );
       }
 
-      // Course
+      // ======================================
+      // COURSE
+      // ======================================
+
       if (
         scholarship.requiredCourse &&
         scholarship.requiredCourse
@@ -1080,8 +1132,7 @@ app.get(
       }
 
       const eligible =
-        reasons.length ===
-        0;
+        reasons.length === 0;
 
       return res.status(200).json({
         eligible,
@@ -1121,12 +1172,14 @@ app.get(
         },
       });
     } catch (error) {
+      console.error(
+        "Eligibility check error:",
+        error
+      );
+
       return res.status(500).json({
         message:
           "Failed to check scholarship eligibility.",
-
-        error:
-          error.message,
       });
     }
   }
@@ -1134,6 +1187,7 @@ app.get(
 
 // ==========================================
 // GET SINGLE SCHOLARSHIP
+// STEP 30.8 ACCESS CONTROL
 // ==========================================
 
 app.get(
@@ -1149,6 +1203,21 @@ app.get(
 
   async (req, res) => {
     try {
+      // ======================================
+      // ID VALIDATION
+      // ======================================
+
+      if (
+        !isValidObjectId(
+          req.params.id
+        )
+      ) {
+        return res.status(400).json({
+          message:
+            "Invalid scholarship ID.",
+        });
+      }
+
       const scholarship =
         await Scholarship.findById(
           req.params.id
@@ -1161,16 +1230,57 @@ app.get(
         });
       }
 
+      // ======================================
+      // STUDENT ACCESS
+      // ======================================
+
+      if (
+        req.user.role ===
+        "student"
+      ) {
+        if (
+          scholarship.status !==
+          "active"
+        ) {
+          return res.status(403).json({
+            message:
+              "This scholarship is not currently available.",
+          });
+        }
+      }
+
+      // ======================================
+      // PROVIDER ACCESS
+      // ======================================
+
+      if (
+        req.user.role ===
+        "provider"
+      ) {
+        if (
+          !scholarship.providerUser ||
+          scholarship.providerUser.toString() !==
+            req.user.id
+        ) {
+          return res.status(403).json({
+            message:
+              "You are not allowed to access this scholarship.",
+          });
+        }
+      }
+
       return res.status(200).json({
         scholarship,
       });
     } catch (error) {
+      console.error(
+        "Scholarship details error:",
+        error
+      );
+
       return res.status(500).json({
         message:
           "Failed to fetch scholarship.",
-
-        error:
-          error.message,
       });
     }
   }
@@ -1178,6 +1288,7 @@ app.get(
 
 // ==========================================
 // UPDATE SCHOLARSHIP
+// STEP 30.8 ID + OWNERSHIP CHECK
 // ==========================================
 
 app.put(
@@ -1192,6 +1303,21 @@ app.put(
 
   async (req, res) => {
     try {
+      // ======================================
+      // ID VALIDATION
+      // ======================================
+
+      if (
+        !isValidObjectId(
+          req.params.id
+        )
+      ) {
+        return res.status(400).json({
+          message:
+            "Invalid scholarship ID.",
+        });
+      }
+
       const scholarship =
         await Scholarship.findById(
           req.params.id
@@ -1203,6 +1329,10 @@ app.put(
             "Scholarship not found.",
         });
       }
+
+      // ======================================
+      // OWNERSHIP
+      // ======================================
 
       if (
         req.user.role ===
@@ -1232,15 +1362,17 @@ app.put(
         requirements,
       } = req.body;
 
-      // Title
+      // ======================================
+      // TITLE
+      // ======================================
+
       if (
         title !==
         undefined
       ) {
-        title =
-          String(
-            title
-          ).trim();
+        title = String(
+          title
+        ).trim();
 
         if (!title) {
           return res.status(400).json({
@@ -1253,15 +1385,17 @@ app.put(
           title;
       }
 
-      // Provider
+      // ======================================
+      // PROVIDER
+      // ======================================
+
       if (
         provider !==
         undefined
       ) {
-        provider =
-          String(
-            provider
-          ).trim();
+        provider = String(
+          provider
+        ).trim();
 
         if (!provider) {
           return res.status(400).json({
@@ -1274,19 +1408,19 @@ app.put(
           provider;
       }
 
-      // Description
+      // ======================================
+      // DESCRIPTION
+      // ======================================
+
       if (
         description !==
         undefined
       ) {
-        description =
-          String(
-            description
-          ).trim();
+        description = String(
+          description
+        ).trim();
 
-        if (
-          !description
-        ) {
+        if (!description) {
           return res.status(400).json({
             message:
               "Scholarship description cannot be empty.",
@@ -1297,7 +1431,10 @@ app.put(
           description;
       }
 
-      // Amount
+      // ======================================
+      // AMOUNT
+      // ======================================
+
       if (
         amount !==
         undefined
@@ -1331,7 +1468,10 @@ app.put(
           amountNumber;
       }
 
-      // Deadline
+      // ======================================
+      // DEADLINE
+      // ======================================
+
       if (
         deadline !==
         undefined
@@ -1383,19 +1523,19 @@ app.put(
           deadlineDate;
       }
 
-      // Eligibility
+      // ======================================
+      // ELIGIBILITY
+      // ======================================
+
       if (
         eligibility !==
         undefined
       ) {
-        eligibility =
-          String(
-            eligibility
-          ).trim();
+        eligibility = String(
+          eligibility
+        ).trim();
 
-        if (
-          !eligibility
-        ) {
+        if (!eligibility) {
           return res.status(400).json({
             message:
               "Eligibility description cannot be empty.",
@@ -1406,7 +1546,10 @@ app.put(
           eligibility;
       }
 
+      // ======================================
       // GPA
+      // ======================================
+
       if (
         minimumGPA !==
         undefined
@@ -1445,7 +1588,10 @@ app.put(
         }
       }
 
-      // Academic year
+      // ======================================
+      // ACADEMIC YEAR
+      // ======================================
+
       if (
         requiredAcademicYear !==
         undefined
@@ -1484,7 +1630,10 @@ app.put(
         }
       }
 
-      // Course
+      // ======================================
+      // COURSE
+      // ======================================
+
       if (
         requiredCourse !==
         undefined
@@ -1498,7 +1647,10 @@ app.put(
               ).trim();
       }
 
-      // Requirements
+      // ======================================
+      // REQUIREMENTS
+      // ======================================
+
       if (
         requirements !==
         undefined
@@ -1557,6 +1709,7 @@ app.put(
 
 // ==========================================
 // CHANGE SCHOLARSHIP STATUS
+// STEP 30.8
 // ==========================================
 
 app.patch(
@@ -1571,6 +1724,21 @@ app.patch(
 
   async (req, res) => {
     try {
+      // ======================================
+      // ID VALIDATION
+      // ======================================
+
+      if (
+        !isValidObjectId(
+          req.params.id
+        )
+      ) {
+        return res.status(400).json({
+          message:
+            "Invalid scholarship ID.",
+        });
+      }
+
       const {
         status,
       } = req.body;
@@ -1601,6 +1769,10 @@ app.patch(
         });
       }
 
+      // ======================================
+      // PROVIDER OWNERSHIP
+      // ======================================
+
       if (
         req.user.role ===
           "provider" &&
@@ -1628,12 +1800,14 @@ app.patch(
         scholarship,
       });
     } catch (error) {
+      console.error(
+        "Scholarship status update error:",
+        error
+      );
+
       return res.status(500).json({
         message:
           "Failed to update scholarship status.",
-
-        error:
-          error.message,
       });
     }
   }
@@ -1641,7 +1815,7 @@ app.patch(
 
 // ==========================================
 // STUDENT - SUBMIT APPLICATION
-// STEP 30.7 - SAFE FILE CLEANUP
+// STEP 30.7 + 30.8
 // ==========================================
 
 app.post(
@@ -1674,7 +1848,7 @@ app.post(
 
       if (
         !scholarshipId ||
-        !mongoose.Types.ObjectId.isValid(
+        !isValidObjectId(
           scholarshipId
         )
       ) {
@@ -1687,10 +1861,6 @@ app.post(
             "Invalid scholarship.",
         });
       }
-
-      // ======================================
-      // SCHOLARSHIP
-      // ======================================
 
       const scholarship =
         await Scholarship.findById(
@@ -1727,7 +1897,7 @@ app.post(
       }
 
       // ======================================
-      // DEADLINE CHECK
+      // DEADLINE
       // ======================================
 
       const currentTime =
@@ -1821,10 +1991,6 @@ app.post(
         });
       }
 
-      // ======================================
-      // PROFILE COMPLETENESS
-      // ======================================
-
       if (
         !profile.university ||
         !profile.course ||
@@ -1854,7 +2020,6 @@ app.post(
       const eligibilityReasons =
         [];
 
-      // GPA
       if (
         scholarship.minimumGPA >
           0 &&
@@ -1866,7 +2031,6 @@ app.post(
         );
       }
 
-      // Academic year
       if (
         scholarship.requiredAcademicYear &&
         profile.academicYear !==
@@ -1877,7 +2041,6 @@ app.post(
         );
       }
 
-      // Course
       if (
         scholarship.requiredCourse &&
         scholarship.requiredCourse
@@ -2022,8 +2185,6 @@ app.post(
 
       await application.save();
 
-      // From this point the files belong
-      // to a valid saved application.
       applicationSaved =
         true;
 
@@ -2034,9 +2195,6 @@ app.post(
         application,
       });
     } catch (error) {
-      // If the application failed before
-      // being stored in MongoDB, remove
-      // any newly uploaded files.
       if (
         !applicationSaved
       ) {
@@ -2060,6 +2218,7 @@ app.post(
 
 // ==========================================
 // SECURE DOCUMENT ACCESS
+// STEP 30.8 ID + ACCESS CHECKS
 // ==========================================
 
 app.get(
@@ -2079,6 +2238,32 @@ app.get(
         applicationId,
         documentId,
       } = req.params;
+
+      // ======================================
+      // APPLICATION ID
+      // ======================================
+
+      if (
+        !isValidObjectId(
+          applicationId
+        )
+      ) {
+        return res.status(400).json({
+          message:
+            "Invalid application ID.",
+        });
+      }
+
+      if (
+        !isValidObjectId(
+          documentId
+        )
+      ) {
+        return res.status(400).json({
+          message:
+            "Invalid document ID.",
+        });
+      }
 
       const application =
         await Application.findById(
@@ -2106,8 +2291,10 @@ app.get(
         });
       }
 
-      // Student can only access
-      // own documents.
+      // ======================================
+      // STUDENT ACCESS
+      // ======================================
+
       if (
         req.user.role ===
           "student" &&
@@ -2120,8 +2307,10 @@ app.get(
         });
       }
 
-      // Provider can only access documents
-      // belonging to their scholarships.
+      // ======================================
+      // PROVIDER ACCESS
+      // ======================================
+
       if (
         req.user.role ===
         "provider"
@@ -2159,7 +2348,6 @@ app.get(
           safeFileName
         );
 
-      // Path traversal protection
       if (
         path.dirname(
           filePath
@@ -2203,12 +2391,14 @@ app.get(
         }
       );
     } catch (error) {
+      console.error(
+        "Document access error:",
+        error
+      );
+
       return res.status(500).json({
         message:
           "Failed to open document.",
-
-        error:
-          error.message,
       });
     }
   }
@@ -2246,19 +2436,21 @@ app.get(
         applications,
       });
     } catch (error) {
+      console.error(
+        "Student applications error:",
+        error
+      );
+
       return res.status(500).json({
         message:
           "Failed to fetch your applications.",
-
-        error:
-          error.message,
       });
     }
   }
 );
 
 // ==========================================
-// PROVIDER / ADMIN - APPLICATIONS
+// PROVIDER / ADMIN - VIEW APPLICATIONS
 // ==========================================
 
 app.get(
@@ -2275,6 +2467,7 @@ app.get(
     try {
       let applications;
 
+      // Admin sees all applications
       if (
         req.user.role ===
         "admin"
@@ -2293,6 +2486,9 @@ app.get(
                 -1,
             });
       } else {
+        // Provider only sees applications
+        // for scholarships they own.
+
         const providerScholarships =
           await Scholarship.find({
             providerUser:
@@ -2333,19 +2529,22 @@ app.get(
         applications,
       });
     } catch (error) {
+      console.error(
+        "Provider applications error:",
+        error
+      );
+
       return res.status(500).json({
         message:
           "Failed to fetch applications.",
-
-        error:
-          error.message,
       });
     }
   }
 );
 
 // ==========================================
-// UPDATE APPLICATION STATUS
+// PROVIDER / ADMIN - UPDATE APPLICATION STATUS
+// STEP 30.8 ID + OWNERSHIP CHECK
 // ==========================================
 
 app.patch(
@@ -2360,6 +2559,21 @@ app.patch(
 
   async (req, res) => {
     try {
+      // ======================================
+      // ID VALIDATION
+      // ======================================
+
+      if (
+        !isValidObjectId(
+          req.params.id
+        )
+      ) {
+        return res.status(400).json({
+          message:
+            "Invalid application ID.",
+        });
+      }
+
       const {
         status,
       } = req.body;
@@ -2397,6 +2611,10 @@ app.patch(
         });
       }
 
+      // ======================================
+      // PROVIDER OWNERSHIP
+      // ======================================
+
       if (
         req.user.role ===
         "provider"
@@ -2429,12 +2647,14 @@ app.patch(
         application,
       });
     } catch (error) {
+      console.error(
+        "Application status update error:",
+        error
+      );
+
       return res.status(500).json({
         message:
           "Failed to update application status.",
-
-        error:
-          error.message,
       });
     }
   }
@@ -2504,12 +2724,14 @@ app.get(
         },
       });
     } catch (error) {
+      console.error(
+        "Admin dashboard error:",
+        error
+      );
+
       return res.status(500).json({
         message:
           "Failed to load admin dashboard.",
-
-        error:
-          error.message,
       });
     }
   }
@@ -2544,19 +2766,21 @@ app.get(
         users,
       });
     } catch (error) {
+      console.error(
+        "Admin users error:",
+        error
+      );
+
       return res.status(500).json({
         message:
           "Failed to fetch users.",
-
-        error:
-          error.message,
       });
     }
   }
 );
 
 // ==========================================
-// FILE UPLOAD ERROR HANDLER
+// FILE UPLOAD / GLOBAL ERROR HANDLER
 // ==========================================
 
 app.use(
@@ -2566,6 +2790,10 @@ app.use(
     res,
     next
   ) => {
+    // ======================================
+    // MULTER ERRORS
+    // ======================================
+
     if (
       error instanceof
       multer.MulterError
@@ -2596,6 +2824,10 @@ app.use(
       });
     }
 
+    // ======================================
+    // INVALID FILE TYPE
+    // ======================================
+
     if (
       error.message ===
       "Only PDF, JPG, JPEG, PNG, DOC and DOCX files are allowed."
@@ -2607,6 +2839,7 @@ app.use(
     }
 
     console.error(
+      "Unexpected server error:",
       error
     );
 
