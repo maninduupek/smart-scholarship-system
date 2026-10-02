@@ -32,11 +32,9 @@ const JWT_SECRET = process.env.JWT_SECRET;
 app.use(cors());
 app.use(express.json());
 
-// Uploaded documents
-app.use(
-  "/uploads",
-  express.static(path.join(__dirname, "uploads"))
-);
+// IMPORTANT:
+// We do NOT publicly expose the uploads folder.
+// Documents are accessed through a protected API route.
 
 // ==========================================
 // DATABASE CONNECTION
@@ -375,7 +373,8 @@ app.get(
       });
     } catch (error) {
       res.status(500).json({
-        message: "Failed to fetch provider scholarships.",
+        message:
+          "Failed to fetch provider scholarships.",
         error: error.message,
       });
     }
@@ -495,7 +494,8 @@ app.get(
       });
     } catch (error) {
       res.status(500).json({
-        message: "Failed to check scholarship eligibility.",
+        message:
+          "Failed to check scholarship eligibility.",
         error: error.message,
       });
     }
@@ -554,7 +554,6 @@ app.put(
         });
       }
 
-      // Provider can only edit own scholarship
       if (
         req.user.role === "provider" &&
         (!scholarship.providerUser ||
@@ -580,8 +579,6 @@ app.put(
         requirements,
       } = req.body;
 
-      // BASIC INFORMATION
-
       if (title !== undefined) {
         scholarship.title = title;
       }
@@ -606,8 +603,6 @@ app.put(
         scholarship.eligibility = eligibility;
       }
 
-      // STRUCTURED ELIGIBILITY
-
       if (minimumGPA !== undefined) {
         scholarship.minimumGPA =
           minimumGPA === ""
@@ -627,8 +622,6 @@ app.put(
         scholarship.requiredCourse =
           requiredCourse.trim();
       }
-
-      // REQUIREMENTS
 
       if (requirements !== undefined) {
         scholarship.requirements = requirements;
@@ -911,6 +904,163 @@ app.post(
 );
 
 // ==========================================
+// SECURE APPLICATION DOCUMENT ACCESS
+// ==========================================
+
+app.get(
+  "/api/applications/:applicationId/documents/:documentId",
+  authMiddleware,
+  roleMiddleware(["student", "provider", "admin"]),
+  async (req, res) => {
+    try {
+      const {
+        applicationId,
+        documentId,
+      } = req.params;
+
+      // ======================================
+      // FIND APPLICATION
+      // ======================================
+
+      const application =
+        await Application.findById(
+          applicationId
+        ).populate("scholarship");
+
+      if (!application) {
+        return res.status(404).json({
+          message: "Application not found.",
+        });
+      }
+
+      // ======================================
+      // FIND DOCUMENT
+      // ======================================
+
+      const document =
+        application.documents.id(
+          documentId
+        );
+
+      if (!document) {
+        return res.status(404).json({
+          message: "Document not found.",
+        });
+      }
+
+      // ======================================
+      // STUDENT ACCESS
+      // Student can only access own documents
+      // ======================================
+
+      if (req.user.role === "student") {
+        if (
+          application.student.toString() !==
+          req.user.id
+        ) {
+          return res.status(403).json({
+            message:
+              "You are not allowed to view this document.",
+          });
+        }
+      }
+
+      // ======================================
+      // PROVIDER ACCESS
+      // Provider can only access documents
+      // belonging to their scholarships
+      // ======================================
+
+      if (req.user.role === "provider") {
+        const scholarship =
+          application.scholarship;
+
+        if (
+          !scholarship ||
+          !scholarship.providerUser ||
+          scholarship.providerUser.toString() !==
+            req.user.id
+        ) {
+          return res.status(403).json({
+            message:
+              "You are not allowed to view this document.",
+          });
+        }
+      }
+
+      // Admin is allowed to access all documents.
+
+      // ======================================
+      // BUILD SAFE FILE PATH
+      // ======================================
+
+      const uploadsDirectory = path.resolve(
+        __dirname,
+        "uploads"
+      );
+
+      // Never use a filename supplied directly
+      // through the URL.
+      const safeFileName = path.basename(
+        document.fileName
+      );
+
+      const filePath = path.resolve(
+        uploadsDirectory,
+        safeFileName
+      );
+
+      // Extra protection against unsafe paths
+      if (
+        path.dirname(filePath) !==
+        uploadsDirectory
+      ) {
+        return res.status(400).json({
+          message: "Invalid document path.",
+        });
+      }
+
+      // ======================================
+      // SEND DOCUMENT
+      // ======================================
+
+      res.setHeader(
+        "Content-Type",
+        document.fileType ||
+          "application/octet-stream"
+      );
+
+      res.setHeader(
+        "Content-Disposition",
+        `inline; filename="${encodeURIComponent(
+          document.originalName
+        )}"`
+      );
+
+      return res.sendFile(
+        filePath,
+        (error) => {
+          if (
+            error &&
+            !res.headersSent
+          ) {
+            return res.status(404).json({
+              message:
+                "Document file was not found on the server.",
+            });
+          }
+        }
+      );
+    } catch (error) {
+      return res.status(500).json({
+        message: "Failed to open document.",
+        error: error.message,
+      });
+    }
+  }
+);
+
+// ==========================================
 // STUDENT - MY APPLICATIONS
 // ==========================================
 
@@ -1021,9 +1171,10 @@ app.patch(
         });
       }
 
-      const application = await Application.findById(
-        req.params.id
-      ).populate("scholarship");
+      const application =
+        await Application.findById(
+          req.params.id
+        ).populate("scholarship");
 
       if (!application) {
         return res.status(404).json({
@@ -1032,10 +1183,11 @@ app.patch(
       }
 
       // Provider can only manage applications
-      // belonging to their own scholarships
+      // belonging to their own scholarships.
 
       if (req.user.role === "provider") {
-        const scholarship = application.scholarship;
+        const scholarship =
+          application.scholarship;
 
         if (
           !scholarship ||

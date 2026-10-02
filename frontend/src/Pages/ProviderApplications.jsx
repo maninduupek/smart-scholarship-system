@@ -6,6 +6,7 @@ function ProviderApplications() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [selectedStatuses, setSelectedStatuses] = useState({});
+  const [openingDocument, setOpeningDocument] = useState("");
 
   // ==========================================
   // GET PROVIDER APPLICATIONS
@@ -37,7 +38,6 @@ function ProviderApplications() {
         setError(
           data.message || "Failed to load applications."
         );
-        setLoading(false);
         return;
       }
 
@@ -72,10 +72,10 @@ function ProviderApplications() {
     applicationId,
     status
   ) => {
-    setSelectedStatuses({
-      ...selectedStatuses,
+    setSelectedStatuses((previousStatuses) => ({
+      ...previousStatuses,
       [applicationId]: status,
-    });
+    }));
   };
 
   // ==========================================
@@ -87,6 +87,11 @@ function ProviderApplications() {
 
     setMessage("");
     setError("");
+
+    if (!token) {
+      setError("Please login to update application status.");
+      return;
+    }
 
     try {
       const response = await fetch(
@@ -119,9 +124,87 @@ function ProviderApplications() {
 
       await fetchApplications();
     } catch (error) {
-      setError(
-        "Unable to connect to the server."
+      setError("Unable to connect to the server.");
+    }
+  };
+
+  // ==========================================
+  // VIEW SECURE DOCUMENT
+  // ==========================================
+
+  const viewDocument = async (
+    applicationId,
+    documentId
+  ) => {
+    const token = localStorage.getItem("token");
+
+    setError("");
+    setMessage("");
+
+    if (!token) {
+      setError("Please login to view documents.");
+      return;
+    }
+
+    const documentKey = `${applicationId}-${documentId}`;
+
+    setOpeningDocument(documentKey);
+
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/applications/${applicationId}/documents/${documentId}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
+
+      if (!response.ok) {
+        let errorMessage =
+          "Failed to open the document.";
+
+        try {
+          const data = await response.json();
+
+          if (data.message) {
+            errorMessage = data.message;
+          }
+        } catch (error) {
+          // Response was not JSON
+        }
+
+        setError(errorMessage);
+        return;
+      }
+
+      const fileBlob = await response.blob();
+
+      const fileURL =
+        window.URL.createObjectURL(fileBlob);
+
+      const newWindow = window.open(
+        fileURL,
+        "_blank",
+        "noopener,noreferrer"
+      );
+
+      if (!newWindow) {
+        setError(
+          "The browser blocked the document window. Please allow pop-ups and try again."
+        );
+      }
+
+      setTimeout(() => {
+        window.URL.revokeObjectURL(fileURL);
+      }, 60000);
+    } catch (error) {
+      setError(
+        "Unable to connect to the server while opening the document."
+      );
+    } finally {
+      setOpeningDocument("");
     }
   };
 
@@ -173,7 +256,6 @@ function ProviderApplications() {
         </p>
 
         {message && <p>{message}</p>}
-
         {error && <p>{error}</p>}
 
         {applications.length === 0 ? (
@@ -184,9 +266,7 @@ function ProviderApplications() {
           <div>
             {applications.map((application) => (
               <div key={application._id}>
-                {/* ===========================
-                    SCHOLARSHIP INFORMATION
-                ============================ */}
+                {/* SCHOLARSHIP INFORMATION */}
 
                 <h2>
                   {application.scholarship?.title ||
@@ -199,9 +279,7 @@ function ProviderApplications() {
                     "Not available"}
                 </p>
 
-                {/* ===========================
-                    STUDENT INFORMATION
-                ============================ */}
+                {/* STUDENT INFORMATION */}
 
                 <h3>Student Information</h3>
 
@@ -230,9 +308,7 @@ function ProviderApplications() {
                   {application.academicYear}
                 </p>
 
-                {/* ===========================
-                    APPLICATION INFORMATION
-                ============================ */}
+                {/* APPLICATION INFORMATION */}
 
                 <h3>Application Information</h3>
 
@@ -255,9 +331,7 @@ function ProviderApplications() {
                   ).toLocaleDateString()}
                 </p>
 
-                {/* ===========================
-                    UPLOADED DOCUMENTS
-                ============================ */}
+                {/* UPLOADED DOCUMENTS */}
 
                 <h3>Uploaded Documents</h3>
 
@@ -265,33 +339,52 @@ function ProviderApplications() {
                 application.documents.length > 0 ? (
                   <ul>
                     {application.documents.map(
-                      (document, index) => (
-                        <li
-                          key={
+                      (document, index) => {
+                        const documentKey =
+                          `${application._id}-${
                             document._id || index
-                          }
-                        >
-                          <strong>
-                            {document.originalName}
-                          </strong>
+                          }`;
 
-                          {" — "}
-
-                          {formatFileSize(
-                            document.fileSize
-                          )}
-
-                          {" — "}
-
-                          <a
-                            href={`http://localhost:5000/uploads/${document.fileName}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                        return (
+                          <li
+                            key={
+                              document._id || index
+                            }
                           >
-                            View Document
-                          </a>
-                        </li>
-                      )
+                            <strong>
+                              {document.originalName}
+                            </strong>
+
+                            {" — "}
+
+                            {formatFileSize(
+                              document.fileSize
+                            )}
+
+                            {" — "}
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                viewDocument(
+                                  application._id,
+                                  document._id
+                                )
+                              }
+                              disabled={
+                                !document._id ||
+                                openingDocument ===
+                                  documentKey
+                              }
+                            >
+                              {openingDocument ===
+                              documentKey
+                                ? "Opening..."
+                                : "View Document"}
+                            </button>
+                          </li>
+                        );
+                      }
                     )}
                   </ul>
                 ) : (
@@ -301,9 +394,7 @@ function ProviderApplications() {
                   </p>
                 )}
 
-                {/* ===========================
-                    UPDATE STATUS
-                ============================ */}
+                {/* UPDATE STATUS */}
 
                 <h3>Update Status</h3>
 
