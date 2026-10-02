@@ -6,6 +6,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs");
 const multer = require("multer");
 
 const User = require("./models/User");
@@ -27,13 +28,42 @@ const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET;
 
 // ==========================================
+// UPLOADED FILE CLEANUP HELPER
+// STEP 30.7
+// ==========================================
+
+const cleanupUploadedFiles = (files = []) => {
+  for (const file of files) {
+    try {
+      if (
+        file &&
+        file.path &&
+        fs.existsSync(file.path)
+      ) {
+        fs.unlinkSync(file.path);
+
+        console.log(
+          `Removed unused uploaded file: ${file.filename}`
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Failed to remove unused uploaded file:",
+        error.message
+      );
+    }
+  }
+};
+
+// ==========================================
 // MIDDLEWARE
 // ==========================================
 
 app.use(cors());
 app.use(express.json());
 
-// Uploaded documents are NOT publicly exposed.
+// IMPORTANT:
+// uploads folder is NOT publicly exposed.
 
 // ==========================================
 // DATABASE CONNECTION
@@ -45,7 +75,10 @@ mongoose
     console.log("MongoDB connected successfully!");
   })
   .catch((error) => {
-    console.error("MongoDB connection failed:", error);
+    console.error(
+      "MongoDB connection failed:",
+      error
+    );
   });
 
 // ==========================================
@@ -53,160 +86,248 @@ mongoose
 // ==========================================
 
 app.get("/", (req, res) => {
-  res.send("Smart Scholarship System Backend is running!");
+  res.send(
+    "Smart Scholarship System Backend is running!"
+  );
 });
 
 // ==========================================
 // USER REGISTRATION
 // ==========================================
 
-app.post("/api/users/register", async (req, res) => {
-  try {
-    let { fullName, email, password } = req.body;
+app.post(
+  "/api/users/register",
+  async (req, res) => {
+    try {
+      let {
+        fullName,
+        email,
+        password,
+      } = req.body;
 
-    if (!fullName || !email || !password) {
-      return res.status(400).json({
-        message: "Full name, email and password are required.",
+      if (
+        !fullName ||
+        !email ||
+        !password
+      ) {
+        return res.status(400).json({
+          message:
+            "Full name, email and password are required.",
+        });
+      }
+
+      fullName =
+        fullName.trim();
+
+      email =
+        email
+          .trim()
+          .toLowerCase();
+
+      if (
+        fullName.length < 2
+      ) {
+        return res.status(400).json({
+          message:
+            "Please enter a valid full name.",
+        });
+      }
+
+      const emailPattern =
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      if (
+        !emailPattern.test(email)
+      ) {
+        return res.status(400).json({
+          message:
+            "Please enter a valid email address.",
+        });
+      }
+
+      if (
+        password.length < 6
+      ) {
+        return res.status(400).json({
+          message:
+            "Password must contain at least 6 characters.",
+        });
+      }
+
+      const existingUser =
+        await User.findOne({
+          email,
+        });
+
+      if (existingUser) {
+        return res.status(400).json({
+          message:
+            "An account with this email already exists.",
+        });
+      }
+
+      const hashedPassword =
+        await bcrypt.hash(
+          password,
+          10
+        );
+
+      const user =
+        new User({
+          fullName,
+          email,
+          password:
+            hashedPassword,
+
+          // Public registration
+          // can only create students.
+          role: "student",
+        });
+
+      await user.save();
+
+      return res
+        .status(201)
+        .json({
+          message:
+            "User registered successfully!",
+
+          user: {
+            id: user._id,
+            fullName:
+              user.fullName,
+            email:
+              user.email,
+            role:
+              user.role,
+          },
+        });
+    } catch (error) {
+      console.error(
+        "Registration error:",
+        error
+      );
+
+      return res.status(500).json({
+        message:
+          "Registration failed. Please try again.",
       });
     }
-
-    fullName = fullName.trim();
-    email = email.trim().toLowerCase();
-
-    if (fullName.length < 2) {
-      return res.status(400).json({
-        message: "Please enter a valid full name.",
-      });
-    }
-
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!emailPattern.test(email)) {
-      return res.status(400).json({
-        message: "Please enter a valid email address.",
-      });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({
-        message: "Password must contain at least 6 characters.",
-      });
-    }
-
-    const existingUser = await User.findOne({
-      email,
-    });
-
-    if (existingUser) {
-      return res.status(400).json({
-        message: "An account with this email already exists.",
-      });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = new User({
-      fullName,
-      email,
-      password: hashedPassword,
-      role: "student",
-    });
-
-    await user.save();
-
-    return res.status(201).json({
-      message: "User registered successfully!",
-      user: {
-        id: user._id,
-        fullName: user.fullName,
-        email: user.email,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    console.error("Registration error:", error);
-
-    return res.status(500).json({
-      message: "Registration failed. Please try again.",
-    });
   }
-});
+);
 
 // ==========================================
 // USER LOGIN
 // ==========================================
 
-app.post("/api/users/login", async (req, res) => {
-  try {
-    let { email, password } = req.body;
+app.post(
+  "/api/users/login",
+  async (req, res) => {
+    try {
+      let {
+        email,
+        password,
+      } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({
-        message: "Email and password are required.",
-      });
-    }
-
-    email = email.trim().toLowerCase();
-
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!emailPattern.test(email)) {
-      return res.status(400).json({
-        message: "Please enter a valid email address.",
-      });
-    }
-
-    const user = await User.findOne({
-      email,
-    });
-
-    if (!user) {
-      return res.status(400).json({
-        message: "Invalid email or password.",
-      });
-    }
-
-    const passwordMatch = await bcrypt.compare(
-      password,
-      user.password
-    );
-
-    if (!passwordMatch) {
-      return res.status(400).json({
-        message: "Invalid email or password.",
-      });
-    }
-
-    const token = jwt.sign(
-      {
-        id: user._id,
-        email: user.email,
-        role: user.role,
-      },
-      JWT_SECRET,
-      {
-        expiresIn: "1h",
+      if (
+        !email ||
+        !password
+      ) {
+        return res.status(400).json({
+          message:
+            "Email and password are required.",
+        });
       }
-    );
 
-    return res.status(200).json({
-      message: "Login successful!",
-      token,
-      user: {
-        id: user._id,
-        fullName: user.fullName,
-        email: user.email,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    console.error("Login error:", error);
+      email =
+        email
+          .trim()
+          .toLowerCase();
 
-    return res.status(500).json({
-      message: "Login failed. Please try again.",
-    });
+      const emailPattern =
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      if (
+        !emailPattern.test(email)
+      ) {
+        return res.status(400).json({
+          message:
+            "Please enter a valid email address.",
+        });
+      }
+
+      const user =
+        await User.findOne({
+          email,
+        });
+
+      if (!user) {
+        return res.status(400).json({
+          message:
+            "Invalid email or password.",
+        });
+      }
+
+      const passwordMatch =
+        await bcrypt.compare(
+          password,
+          user.password
+        );
+
+      if (!passwordMatch) {
+        return res.status(400).json({
+          message:
+            "Invalid email or password.",
+        });
+      }
+
+      const token =
+        jwt.sign(
+          {
+            id: user._id,
+            email:
+              user.email,
+            role:
+              user.role,
+          },
+
+          JWT_SECRET,
+
+          {
+            expiresIn:
+              "1h",
+          }
+        );
+
+      return res.status(200).json({
+        message:
+          "Login successful!",
+
+        token,
+
+        user: {
+          id: user._id,
+          fullName:
+            user.fullName,
+          email:
+            user.email,
+          role:
+            user.role,
+        },
+      });
+    } catch (error) {
+      console.error(
+        "Login error:",
+        error
+      );
+
+      return res.status(500).json({
+        message:
+          "Login failed. Please try again.",
+      });
+    }
   }
-});
+);
 
 // ==========================================
 // STUDENT PROFILE - GET
@@ -214,23 +335,34 @@ app.post("/api/users/login", async (req, res) => {
 
 app.get(
   "/api/student/profile",
+
   authMiddleware,
-  roleMiddleware(["student"]),
+
+  roleMiddleware([
+    "student",
+  ]),
+
   async (req, res) => {
     try {
-      const user = await User.findById(req.user.id).select(
-        "fullName email"
-      );
+      const user =
+        await User.findById(
+          req.user.id
+        ).select(
+          "fullName email"
+        );
 
       if (!user) {
         return res.status(404).json({
-          message: "User not found.",
+          message:
+            "User not found.",
         });
       }
 
-      const profile = await StudentProfile.findOne({
-        student: req.user.id,
-      });
+      const profile =
+        await StudentProfile.findOne({
+          student:
+            req.user.id,
+        });
 
       return res.status(200).json({
         user,
@@ -238,8 +370,10 @@ app.get(
       });
     } catch (error) {
       return res.status(500).json({
-        message: "Failed to load student profile.",
-        error: error.message,
+        message:
+          "Failed to load student profile.",
+        error:
+          error.message,
       });
     }
   }
@@ -247,13 +381,17 @@ app.get(
 
 // ==========================================
 // STUDENT PROFILE - CREATE / UPDATE
-// STEP 30.6B VALIDATION
 // ==========================================
 
 app.put(
   "/api/student/profile",
+
   authMiddleware,
-  roleMiddleware(["student"]),
+
+  roleMiddleware([
+    "student",
+  ]),
+
   async (req, res) => {
     try {
       let {
@@ -263,12 +401,15 @@ app.put(
         gpa,
       } = req.body;
 
-      // Required fields
       if (
-        university === undefined ||
-        course === undefined ||
-        academicYear === undefined ||
-        gpa === undefined ||
+        university ===
+          undefined ||
+        course ===
+          undefined ||
+        academicYear ===
+          undefined ||
+        gpa ===
+          undefined ||
         university === null ||
         course === null ||
         academicYear === null ||
@@ -280,36 +421,56 @@ app.put(
         });
       }
 
-      // Clean text
-      university = String(university).trim();
-      course = String(course).trim();
+      university =
+        String(
+          university
+        ).trim();
+
+      course =
+        String(
+          course
+        ).trim();
 
       if (!university) {
         return res.status(400).json({
-          message: "University is required.",
+          message:
+            "University is required.",
         });
       }
 
       if (!course) {
         return res.status(400).json({
-          message: "Course is required.",
+          message:
+            "Course is required.",
         });
       }
 
-      if (academicYear === "" || gpa === "") {
-        return res.status(400).json({
-          message: "Academic year and GPA are required.",
-        });
-      }
-
-      const academicYearNumber = Number(academicYear);
-      const gpaNumber = Number(gpa);
-
-      // Academic year 1 - 6
       if (
-        !Number.isInteger(academicYearNumber) ||
-        academicYearNumber < 1 ||
-        academicYearNumber > 6
+        academicYear === "" ||
+        gpa === ""
+      ) {
+        return res.status(400).json({
+          message:
+            "Academic year and GPA are required.",
+        });
+      }
+
+      const academicYearNumber =
+        Number(
+          academicYear
+        );
+
+      const gpaNumber =
+        Number(gpa);
+
+      if (
+        !Number.isInteger(
+          academicYearNumber
+        ) ||
+        academicYearNumber <
+          1 ||
+        academicYearNumber >
+          6
       ) {
         return res.status(400).json({
           message:
@@ -317,44 +478,64 @@ app.put(
         });
       }
 
-      // GPA 0 - 4
       if (
-        !Number.isFinite(gpaNumber) ||
+        !Number.isFinite(
+          gpaNumber
+        ) ||
         gpaNumber < 0 ||
         gpaNumber > 4
       ) {
         return res.status(400).json({
-          message: "GPA must be between 0.00 and 4.00.",
+          message:
+            "GPA must be between 0.00 and 4.00.",
         });
       }
 
-      const profile = await StudentProfile.findOneAndUpdate(
-        {
-          student: req.user.id,
-        },
-        {
-          student: req.user.id,
-          university,
-          course,
-          academicYear: academicYearNumber,
-          gpa: gpaNumber,
-        },
-        {
-          new: true,
-          upsert: true,
-          runValidators: true,
-        }
-      );
+      const profile =
+        await StudentProfile.findOneAndUpdate(
+          {
+            student:
+              req.user.id,
+          },
+
+          {
+            student:
+              req.user.id,
+
+            university,
+
+            course,
+
+            academicYear:
+              academicYearNumber,
+
+            gpa:
+              gpaNumber,
+          },
+
+          {
+            new: true,
+            upsert: true,
+            runValidators:
+              true,
+          }
+        );
 
       return res.status(200).json({
-        message: "Student profile saved successfully!",
+        message:
+          "Student profile saved successfully!",
+
         profile,
       });
     } catch (error) {
-      console.error("Student profile save error:", error);
+      console.error(
+        "Student profile save error:",
+        error
+      );
 
       return res.status(500).json({
-        message: "Failed to save student profile.",
+        message:
+          "Failed to save student profile.",
       });
     }
   }
@@ -362,13 +543,18 @@ app.put(
 
 // ==========================================
 // CREATE SCHOLARSHIP
-// STEP 30.6C VALIDATION
 // ==========================================
 
 app.post(
   "/api/scholarships",
+
   authMiddleware,
-  roleMiddleware(["provider", "admin"]),
+
+  roleMiddleware([
+    "provider",
+    "admin",
+  ]),
+
   async (req, res) => {
     try {
       let {
@@ -384,10 +570,7 @@ app.post(
         requirements,
       } = req.body;
 
-      // ======================================
-      // REQUIRED TEXT FIELDS
-      // ======================================
-
+      // Required fields
       if (
         !title ||
         !provider ||
@@ -401,127 +584,183 @@ app.post(
         });
       }
 
-      title = String(title).trim();
-      provider = String(provider).trim();
-      description = String(description).trim();
-      eligibility = String(eligibility).trim();
+      title =
+        String(
+          title
+        ).trim();
 
-      requiredCourse = requiredCourse
-        ? String(requiredCourse).trim()
-        : "";
+      provider =
+        String(
+          provider
+        ).trim();
+
+      description =
+        String(
+          description
+        ).trim();
+
+      eligibility =
+        String(
+          eligibility
+        ).trim();
+
+      requiredCourse =
+        requiredCourse
+          ? String(
+              requiredCourse
+            ).trim()
+          : "";
 
       if (!title) {
         return res.status(400).json({
-          message: "Scholarship title is required.",
+          message:
+            "Scholarship title is required.",
         });
       }
 
       if (!provider) {
         return res.status(400).json({
-          message: "Scholarship provider is required.",
+          message:
+            "Scholarship provider is required.",
         });
       }
 
       if (!description) {
         return res.status(400).json({
-          message: "Scholarship description is required.",
+          message:
+            "Scholarship description is required.",
         });
       }
 
       if (!eligibility) {
         return res.status(400).json({
-          message: "Eligibility description is required.",
+          message:
+            "Eligibility description is required.",
         });
       }
 
-      // ======================================
-      // AMOUNT VALIDATION
-      // ======================================
-
+      // Amount
       if (
-        amount === undefined ||
+        amount ===
+          undefined ||
         amount === null ||
         amount === ""
       ) {
         return res.status(400).json({
-          message: "Scholarship amount is required.",
+          message:
+            "Scholarship amount is required.",
         });
       }
 
-      const amountNumber = Number(amount);
+      const amountNumber =
+        Number(amount);
 
       if (
-        !Number.isFinite(amountNumber) ||
+        !Number.isFinite(
+          amountNumber
+        ) ||
         amountNumber <= 0
       ) {
         return res.status(400).json({
-          message: "Scholarship amount must be greater than 0.",
+          message:
+            "Scholarship amount must be greater than 0.",
         });
       }
 
-      // ======================================
-      // DEADLINE VALIDATION
-      // ======================================
-
-      const deadlineDate = new Date(deadline);
-
-      if (Number.isNaN(deadlineDate.getTime())) {
-        return res.status(400).json({
-          message: "Please enter a valid scholarship deadline.",
-        });
-      }
-
-      const today = new Date();
-
-      today.setHours(0, 0, 0, 0);
-
-      if (deadlineDate < today) {
-        return res.status(400).json({
-          message: "Scholarship deadline cannot be in the past.",
-        });
-      }
-
-      // ======================================
-      // MINIMUM GPA VALIDATION
-      // ======================================
-
-      let minimumGPANumber = 0;
+      // Deadline
+      const deadlineDate =
+        new Date(
+          deadline
+        );
 
       if (
-        minimumGPA !== undefined &&
-        minimumGPA !== null &&
+        Number.isNaN(
+          deadlineDate.getTime()
+        )
+      ) {
+        return res.status(400).json({
+          message:
+            "Please enter a valid scholarship deadline.",
+        });
+      }
+
+      const today =
+        new Date();
+
+      today.setHours(
+        0,
+        0,
+        0,
+        0
+      );
+
+      if (
+        deadlineDate <
+        today
+      ) {
+        return res.status(400).json({
+          message:
+            "Scholarship deadline cannot be in the past.",
+        });
+      }
+
+      // GPA
+      let minimumGPANumber =
+        0;
+
+      if (
+        minimumGPA !==
+          undefined &&
+        minimumGPA !==
+          null &&
         minimumGPA !== ""
       ) {
-        minimumGPANumber = Number(minimumGPA);
+        minimumGPANumber =
+          Number(
+            minimumGPA
+          );
 
         if (
-          !Number.isFinite(minimumGPANumber) ||
-          minimumGPANumber < 0 ||
-          minimumGPANumber > 4
+          !Number.isFinite(
+            minimumGPANumber
+          ) ||
+          minimumGPANumber <
+            0 ||
+          minimumGPANumber >
+            4
         ) {
           return res.status(400).json({
-            message: "Minimum GPA must be between 0.00 and 4.00.",
+            message:
+              "Minimum GPA must be between 0.00 and 4.00.",
           });
         }
       }
 
-      // ======================================
-      // ACADEMIC YEAR VALIDATION
-      // ======================================
-
-      let academicYearNumber = null;
+      // Academic year
+      let academicYearNumber =
+        null;
 
       if (
-        requiredAcademicYear !== undefined &&
-        requiredAcademicYear !== null &&
-        requiredAcademicYear !== ""
+        requiredAcademicYear !==
+          undefined &&
+        requiredAcademicYear !==
+          null &&
+        requiredAcademicYear !==
+          ""
       ) {
-        academicYearNumber = Number(requiredAcademicYear);
+        academicYearNumber =
+          Number(
+            requiredAcademicYear
+          );
 
         if (
-          !Number.isInteger(academicYearNumber) ||
-          academicYearNumber < 1 ||
-          academicYearNumber > 6
+          !Number.isInteger(
+            academicYearNumber
+          ) ||
+          academicYearNumber <
+            1 ||
+          academicYearNumber >
+            6
         ) {
           return res.status(400).json({
             message:
@@ -530,60 +769,97 @@ app.post(
         }
       }
 
-      // ======================================
-      // REQUIREMENTS VALIDATION
-      // ======================================
-
-      let cleanedRequirements = [];
+      // Requirements
+      let cleanedRequirements =
+        [];
 
       if (
-        requirements !== undefined &&
-        requirements !== null
+        requirements !==
+          undefined &&
+        requirements !==
+          null
       ) {
-        if (!Array.isArray(requirements)) {
+        if (
+          !Array.isArray(
+            requirements
+          )
+        ) {
           return res.status(400).json({
             message:
               "Scholarship requirements must be provided as a list.",
           });
         }
 
-        cleanedRequirements = requirements
-          .map((requirement) =>
-            String(requirement).trim()
-          )
-          .filter((requirement) => requirement !== "");
+        cleanedRequirements =
+          requirements
+            .map(
+              (
+                requirement
+              ) =>
+                String(
+                  requirement
+                ).trim()
+            )
+            .filter(
+              (
+                requirement
+              ) =>
+                requirement !==
+                ""
+            );
       }
 
-      // ======================================
-      // CREATE
-      // ======================================
+      const scholarship =
+        new Scholarship({
+          title,
 
-      const scholarship = new Scholarship({
-        title,
-        provider,
-        providerUser: req.user.id,
-        description,
-        amount: amountNumber,
-        deadline: deadlineDate,
-        eligibility,
-        minimumGPA: minimumGPANumber,
-        requiredAcademicYear: academicYearNumber,
-        requiredCourse,
-        requirements: cleanedRequirements,
-        status: "active",
-      });
+          provider,
+
+          providerUser:
+            req.user.id,
+
+          description,
+
+          amount:
+            amountNumber,
+
+          deadline:
+            deadlineDate,
+
+          eligibility,
+
+          minimumGPA:
+            minimumGPANumber,
+
+          requiredAcademicYear:
+            academicYearNumber,
+
+          requiredCourse,
+
+          requirements:
+            cleanedRequirements,
+
+          status:
+            "active",
+        });
 
       await scholarship.save();
 
       return res.status(201).json({
-        message: "Scholarship created successfully!",
+        message:
+          "Scholarship created successfully!",
+
         scholarship,
       });
     } catch (error) {
-      console.error("Create scholarship error:", error);
+      console.error(
+        "Create scholarship error:",
+        error
+      );
 
       return res.status(500).json({
-        message: "Failed to create scholarship.",
+        message:
+          "Failed to create scholarship.",
       });
     }
   }
@@ -595,27 +871,36 @@ app.post(
 
 app.get(
   "/api/scholarships",
+
   authMiddleware,
+
   roleMiddleware([
     "student",
     "provider",
     "admin",
   ]),
+
   async (req, res) => {
     try {
-      const scholarships = await Scholarship.find({
-        status: "active",
-      }).sort({
-        createdAt: -1,
-      });
+      const scholarships =
+        await Scholarship.find({
+          status:
+            "active",
+        }).sort({
+          createdAt:
+            -1,
+        });
 
       return res.status(200).json({
         scholarships,
       });
     } catch (error) {
       return res.status(500).json({
-        message: "Failed to fetch scholarships.",
-        error: error.message,
+        message:
+          "Failed to fetch scholarships.",
+
+        error:
+          error.message,
       });
     }
   }
@@ -627,25 +912,36 @@ app.get(
 
 app.get(
   "/api/scholarships/provider/my",
+
   authMiddleware,
+
   roleMiddleware([
     "provider",
     "admin",
   ]),
+
   async (req, res) => {
     try {
       let scholarships;
 
-      if (req.user.role === "admin") {
-        scholarships = await Scholarship.find().sort({
-          createdAt: -1,
-        });
+      if (
+        req.user.role ===
+        "admin"
+      ) {
+        scholarships =
+          await Scholarship.find().sort({
+            createdAt:
+              -1,
+          });
       } else {
-        scholarships = await Scholarship.find({
-          providerUser: req.user.id,
-        }).sort({
-          createdAt: -1,
-        });
+        scholarships =
+          await Scholarship.find({
+            providerUser:
+              req.user.id,
+          }).sort({
+            createdAt:
+              -1,
+          });
       }
 
       return res.status(200).json({
@@ -653,8 +949,11 @@ app.get(
       });
     } catch (error) {
       return res.status(500).json({
-        message: "Failed to fetch provider scholarships.",
-        error: error.message,
+        message:
+          "Failed to fetch provider scholarships.",
+
+        error:
+          error.message,
       });
     }
   }
@@ -666,29 +965,42 @@ app.get(
 
 app.get(
   "/api/scholarships/:id/eligibility",
+
   authMiddleware,
-  roleMiddleware(["student"]),
+
+  roleMiddleware([
+    "student",
+  ]),
+
   async (req, res) => {
     try {
-      const scholarship = await Scholarship.findById(
-        req.params.id
-      );
+      const scholarship =
+        await Scholarship.findById(
+          req.params.id
+        );
 
       if (!scholarship) {
         return res.status(404).json({
-          message: "Scholarship not found.",
+          message:
+            "Scholarship not found.",
         });
       }
 
-      if (scholarship.status !== "active") {
+      if (
+        scholarship.status !==
+        "active"
+      ) {
         return res.status(400).json({
-          message: "This scholarship is currently closed.",
+          message:
+            "This scholarship is currently closed.",
         });
       }
 
-      const profile = await StudentProfile.findOne({
-        student: req.user.id,
-      });
+      const profile =
+        await StudentProfile.findOne({
+          student:
+            req.user.id,
+        });
 
       if (!profile) {
         return res.status(400).json({
@@ -697,23 +1009,31 @@ app.get(
         });
       }
 
-      const reasons = [];
+      const reasons =
+        [];
 
-      // GPA CHECK
+      // GPA
       if (
-        scholarship.minimumGPA > 0 &&
-        (profile.gpa === undefined ||
-          profile.gpa === null ||
-          profile.gpa < scholarship.minimumGPA)
+        scholarship.minimumGPA >
+          0 &&
+        (
+          profile.gpa ===
+            undefined ||
+          profile.gpa ===
+            null ||
+          profile.gpa <
+            scholarship.minimumGPA
+        )
       ) {
         reasons.push(
           `Minimum GPA required is ${scholarship.minimumGPA}. Your GPA is ${
-            profile.gpa ?? "not provided"
+            profile.gpa ??
+            "not provided"
           }.`
         );
       }
 
-      // ACADEMIC YEAR CHECK
+      // Academic year
       if (
         scholarship.requiredAcademicYear &&
         profile.academicYear !==
@@ -721,66 +1041,92 @@ app.get(
       ) {
         reasons.push(
           `Required academic year is Year ${scholarship.requiredAcademicYear}. Your academic year is Year ${
-            profile.academicYear ?? "not provided"
+            profile.academicYear ??
+            "not provided"
           }.`
         );
       }
 
-      // COURSE CHECK
+      // Course
       if (
         scholarship.requiredCourse &&
-        scholarship.requiredCourse.trim() !== ""
+        scholarship.requiredCourse
+          .trim() !== ""
       ) {
-        const studentCourse = (
-          profile.course || ""
-        )
-          .trim()
-          .toLowerCase();
+        const studentCourse =
+          (
+            profile.course ||
+            ""
+          )
+            .trim()
+            .toLowerCase();
 
         const requiredCourse =
           scholarship.requiredCourse
             .trim()
             .toLowerCase();
 
-        if (studentCourse !== requiredCourse) {
+        if (
+          studentCourse !==
+          requiredCourse
+        ) {
           reasons.push(
             `Required course is ${scholarship.requiredCourse}. Your course is ${
-              profile.course || "not provided"
+              profile.course ||
+              "not provided"
             }.`
           );
         }
       }
 
-      const eligible = reasons.length === 0;
+      const eligible =
+        reasons.length ===
+        0;
 
       return res.status(200).json({
         eligible,
 
-        message: eligible
-          ? "You are eligible for this scholarship."
-          : "You do not meet all eligibility requirements.",
+        message:
+          eligible
+            ? "You are eligible for this scholarship."
+            : "You do not meet all eligibility requirements.",
 
         reasons,
 
         studentProfile: {
-          university: profile.university,
-          course: profile.course,
-          academicYear: profile.academicYear,
-          gpa: profile.gpa,
+          university:
+            profile.university,
+
+          course:
+            profile.course,
+
+          academicYear:
+            profile.academicYear,
+
+          gpa:
+            profile.gpa,
         },
 
         scholarshipCriteria: {
-          minimumGPA: scholarship.minimumGPA || 0,
+          minimumGPA:
+            scholarship.minimumGPA ||
+            0,
+
           requiredAcademicYear:
             scholarship.requiredAcademicYear,
+
           requiredCourse:
-            scholarship.requiredCourse || "",
+            scholarship.requiredCourse ||
+            "",
         },
       });
     } catch (error) {
       return res.status(500).json({
-        message: "Failed to check scholarship eligibility.",
-        error: error.message,
+        message:
+          "Failed to check scholarship eligibility.",
+
+        error:
+          error.message,
       });
     }
   }
@@ -792,21 +1138,26 @@ app.get(
 
 app.get(
   "/api/scholarships/:id",
+
   authMiddleware,
+
   roleMiddleware([
     "student",
     "provider",
     "admin",
   ]),
+
   async (req, res) => {
     try {
-      const scholarship = await Scholarship.findById(
-        req.params.id
-      );
+      const scholarship =
+        await Scholarship.findById(
+          req.params.id
+        );
 
       if (!scholarship) {
         return res.status(404).json({
-          message: "Scholarship not found.",
+          message:
+            "Scholarship not found.",
         });
       }
 
@@ -815,8 +1166,11 @@ app.get(
       });
     } catch (error) {
       return res.status(500).json({
-        message: "Failed to fetch scholarship.",
-        error: error.message,
+        message:
+          "Failed to fetch scholarship.",
+
+        error:
+          error.message,
       });
     }
   }
@@ -824,34 +1178,40 @@ app.get(
 
 // ==========================================
 // UPDATE SCHOLARSHIP
-// STEP 30.6C VALIDATION
 // ==========================================
 
 app.put(
   "/api/scholarships/:id",
+
   authMiddleware,
+
   roleMiddleware([
     "provider",
     "admin",
   ]),
+
   async (req, res) => {
     try {
-      const scholarship = await Scholarship.findById(
-        req.params.id
-      );
+      const scholarship =
+        await Scholarship.findById(
+          req.params.id
+        );
 
       if (!scholarship) {
         return res.status(404).json({
-          message: "Scholarship not found.",
+          message:
+            "Scholarship not found.",
         });
       }
 
-      // Provider can only edit own scholarship
       if (
-        req.user.role === "provider" &&
-        (!scholarship.providerUser ||
+        req.user.role ===
+          "provider" &&
+        (
+          !scholarship.providerUser ||
           scholarship.providerUser.toString() !==
-            req.user.id)
+            req.user.id
+        )
       ) {
         return res.status(403).json({
           message:
@@ -872,12 +1232,15 @@ app.put(
         requirements,
       } = req.body;
 
-      // ======================================
-      // TITLE VALIDATION
-      // ======================================
-
-      if (title !== undefined) {
-        title = String(title).trim();
+      // Title
+      if (
+        title !==
+        undefined
+      ) {
+        title =
+          String(
+            title
+          ).trim();
 
         if (!title) {
           return res.status(400).json({
@@ -886,15 +1249,19 @@ app.put(
           });
         }
 
-        scholarship.title = title;
+        scholarship.title =
+          title;
       }
 
-      // ======================================
-      // PROVIDER VALIDATION
-      // ======================================
-
-      if (provider !== undefined) {
-        provider = String(provider).trim();
+      // Provider
+      if (
+        provider !==
+        undefined
+      ) {
+        provider =
+          String(
+            provider
+          ).trim();
 
         if (!provider) {
           return res.status(400).json({
@@ -903,41 +1270,55 @@ app.put(
           });
         }
 
-        scholarship.provider = provider;
+        scholarship.provider =
+          provider;
       }
 
-      // ======================================
-      // DESCRIPTION VALIDATION
-      // ======================================
+      // Description
+      if (
+        description !==
+        undefined
+      ) {
+        description =
+          String(
+            description
+          ).trim();
 
-      if (description !== undefined) {
-        description = String(description).trim();
-
-        if (!description) {
+        if (
+          !description
+        ) {
           return res.status(400).json({
             message:
               "Scholarship description cannot be empty.",
           });
         }
 
-        scholarship.description = description;
+        scholarship.description =
+          description;
       }
 
-      // ======================================
-      // AMOUNT VALIDATION
-      // ======================================
-
-      if (amount !== undefined) {
-        if (amount === null || amount === "") {
+      // Amount
+      if (
+        amount !==
+        undefined
+      ) {
+        if (
+          amount === null ||
+          amount === ""
+        ) {
           return res.status(400).json({
-            message: "Scholarship amount is required.",
+            message:
+              "Scholarship amount is required.",
           });
         }
 
-        const amountNumber = Number(amount);
+        const amountNumber =
+          Number(amount);
 
         if (
-          !Number.isFinite(amountNumber) ||
+          !Number.isFinite(
+            amountNumber
+          ) ||
           amountNumber <= 0
         ) {
           return res.status(400).json({
@@ -946,79 +1327,112 @@ app.put(
           });
         }
 
-        scholarship.amount = amountNumber;
+        scholarship.amount =
+          amountNumber;
       }
 
-      // ======================================
-      // DEADLINE VALIDATION
-      // ======================================
-
-      if (deadline !== undefined) {
+      // Deadline
+      if (
+        deadline !==
+        undefined
+      ) {
         if (!deadline) {
           return res.status(400).json({
-            message: "Scholarship deadline is required.",
+            message:
+              "Scholarship deadline is required.",
           });
         }
 
-        const deadlineDate = new Date(deadline);
+        const deadlineDate =
+          new Date(
+            deadline
+          );
 
-        if (Number.isNaN(deadlineDate.getTime())) {
+        if (
+          Number.isNaN(
+            deadlineDate.getTime()
+          )
+        ) {
           return res.status(400).json({
             message:
               "Please enter a valid scholarship deadline.",
           });
         }
 
-        const today = new Date();
+        const today =
+          new Date();
 
-        today.setHours(0, 0, 0, 0);
+        today.setHours(
+          0,
+          0,
+          0,
+          0
+        );
 
-        if (deadlineDate < today) {
+        if (
+          deadlineDate <
+          today
+        ) {
           return res.status(400).json({
             message:
               "Scholarship deadline cannot be in the past.",
           });
         }
 
-        scholarship.deadline = deadlineDate;
+        scholarship.deadline =
+          deadlineDate;
       }
 
-      // ======================================
-      // ELIGIBILITY VALIDATION
-      // ======================================
+      // Eligibility
+      if (
+        eligibility !==
+        undefined
+      ) {
+        eligibility =
+          String(
+            eligibility
+          ).trim();
 
-      if (eligibility !== undefined) {
-        eligibility = String(eligibility).trim();
-
-        if (!eligibility) {
+        if (
+          !eligibility
+        ) {
           return res.status(400).json({
             message:
               "Eligibility description cannot be empty.",
           });
         }
 
-        scholarship.eligibility = eligibility;
+        scholarship.eligibility =
+          eligibility;
       }
 
-      // ======================================
-      // GPA VALIDATION
-      // ======================================
-
-      if (minimumGPA !== undefined) {
+      // GPA
+      if (
+        minimumGPA !==
+        undefined
+      ) {
         if (
-          minimumGPA === "" ||
-          minimumGPA === null
+          minimumGPA ===
+            "" ||
+          minimumGPA ===
+            null
         ) {
-          scholarship.minimumGPA = 0;
+          scholarship.minimumGPA =
+            0;
         } else {
-          const minimumGPANumber = Number(
-            minimumGPA
-          );
+          const minimumGPANumber =
+            Number(
+              minimumGPA
+            );
 
           if (
-            !Number.isFinite(minimumGPANumber) ||
-            minimumGPANumber < 0 ||
-            minimumGPANumber > 4
+            !Number.isFinite(
+              minimumGPANumber
+            ) ||
+            minimumGPANumber <
+              0 ||
+            minimumGPANumber >
+              4
           ) {
             return res.status(400).json({
               message:
@@ -1031,25 +1445,33 @@ app.put(
         }
       }
 
-      // ======================================
-      // ACADEMIC YEAR VALIDATION
-      // ======================================
-
-      if (requiredAcademicYear !== undefined) {
+      // Academic year
+      if (
+        requiredAcademicYear !==
+        undefined
+      ) {
         if (
-          requiredAcademicYear === "" ||
-          requiredAcademicYear === null
+          requiredAcademicYear ===
+            "" ||
+          requiredAcademicYear ===
+            null
         ) {
-          scholarship.requiredAcademicYear = null;
+          scholarship.requiredAcademicYear =
+            null;
         } else {
-          const academicYearNumber = Number(
-            requiredAcademicYear
-          );
+          const academicYearNumber =
+            Number(
+              requiredAcademicYear
+            );
 
           if (
-            !Number.isInteger(academicYearNumber) ||
-            academicYearNumber < 1 ||
-            academicYearNumber > 6
+            !Number.isInteger(
+              academicYearNumber
+            ) ||
+            academicYearNumber <
+              1 ||
+            academicYearNumber >
+              6
           ) {
             return res.status(400).json({
               message:
@@ -1062,51 +1484,72 @@ app.put(
         }
       }
 
-      // ======================================
-      // REQUIRED COURSE
-      // ======================================
-
-      if (requiredCourse !== undefined) {
+      // Course
+      if (
+        requiredCourse !==
+        undefined
+      ) {
         scholarship.requiredCourse =
-          requiredCourse === null
+          requiredCourse ===
+            null
             ? ""
-            : String(requiredCourse).trim();
+            : String(
+                requiredCourse
+              ).trim();
       }
 
-      // ======================================
-      // REQUIREMENTS VALIDATION
-      // ======================================
-
-      if (requirements !== undefined) {
-        if (!Array.isArray(requirements)) {
+      // Requirements
+      if (
+        requirements !==
+        undefined
+      ) {
+        if (
+          !Array.isArray(
+            requirements
+          )
+        ) {
           return res.status(400).json({
             message:
               "Scholarship requirements must be provided as a list.",
           });
         }
 
-        scholarship.requirements = requirements
-          .map((requirement) =>
-            String(requirement).trim()
-          )
-          .filter((requirement) => requirement !== "");
+        scholarship.requirements =
+          requirements
+            .map(
+              (
+                requirement
+              ) =>
+                String(
+                  requirement
+                ).trim()
+            )
+            .filter(
+              (
+                requirement
+              ) =>
+                requirement !==
+                ""
+            );
       }
-
-      // ======================================
-      // SAVE
-      // ======================================
 
       await scholarship.save();
 
       return res.status(200).json({
-        message: "Scholarship updated successfully!",
+        message:
+          "Scholarship updated successfully!",
+
         scholarship,
       });
     } catch (error) {
-      console.error("Update scholarship error:", error);
+      console.error(
+        "Update scholarship error:",
+        error
+      );
 
       return res.status(500).json({
-        message: "Failed to update scholarship.",
+        message:
+          "Failed to update scholarship.",
       });
     }
   }
@@ -1118,41 +1561,54 @@ app.put(
 
 app.patch(
   "/api/scholarships/:id/status",
+
   authMiddleware,
+
   roleMiddleware([
     "provider",
     "admin",
   ]),
+
   async (req, res) => {
     try {
-      const { status } = req.body;
+      const {
+        status,
+      } = req.body;
 
       if (
         ![
           "active",
           "closed",
-        ].includes(status)
+        ].includes(
+          status
+        )
       ) {
         return res.status(400).json({
-          message: "Status must be active or closed.",
+          message:
+            "Status must be active or closed.",
         });
       }
 
-      const scholarship = await Scholarship.findById(
-        req.params.id
-      );
+      const scholarship =
+        await Scholarship.findById(
+          req.params.id
+        );
 
       if (!scholarship) {
         return res.status(404).json({
-          message: "Scholarship not found.",
+          message:
+            "Scholarship not found.",
         });
       }
 
       if (
-        req.user.role === "provider" &&
-        (!scholarship.providerUser ||
+        req.user.role ===
+          "provider" &&
+        (
+          !scholarship.providerUser ||
           scholarship.providerUser.toString() !==
-            req.user.id)
+            req.user.id
+        )
       ) {
         return res.status(403).json({
           message:
@@ -1160,20 +1616,24 @@ app.patch(
         });
       }
 
-      scholarship.status = status;
+      scholarship.status =
+        status;
 
       await scholarship.save();
 
       return res.status(200).json({
         message:
           "Scholarship status updated successfully!",
+
         scholarship,
       });
     } catch (error) {
       return res.status(500).json({
         message:
           "Failed to update scholarship status.",
-        error: error.message,
+
+        error:
+          error.message,
       });
     }
   }
@@ -1181,32 +1641,85 @@ app.patch(
 
 // ==========================================
 // STUDENT - SUBMIT APPLICATION
+// STEP 30.7 - SAFE FILE CLEANUP
 // ==========================================
 
 app.post(
   "/api/applications",
+
   authMiddleware,
-  roleMiddleware(["student"]),
-  upload.array("documents", 5),
+
+  roleMiddleware([
+    "student",
+  ]),
+
+  upload.array(
+    "documents",
+    5
+  ),
 
   async (req, res) => {
+    let applicationSaved =
+      false;
+
     try {
       const {
         scholarshipId,
         statement,
       } = req.body;
 
-      const scholarship = await Scholarship.findById(
-        scholarshipId
-      );
+      // ======================================
+      // SCHOLARSHIP ID
+      // ======================================
 
-      if (!scholarship) {
-        return res.status(404).json({
-          message: "Scholarship not found.",
+      if (
+        !scholarshipId ||
+        !mongoose.Types.ObjectId.isValid(
+          scholarshipId
+        )
+      ) {
+        cleanupUploadedFiles(
+          req.files
+        );
+
+        return res.status(400).json({
+          message:
+            "Invalid scholarship.",
         });
       }
 
-      if (scholarship.status !== "active") {
+      // ======================================
+      // SCHOLARSHIP
+      // ======================================
+
+      const scholarship =
+        await Scholarship.findById(
+          scholarshipId
+        );
+
+      if (!scholarship) {
+        cleanupUploadedFiles(
+          req.files
+        );
+
+        return res.status(404).json({
+          message:
+            "Scholarship not found.",
+        });
+      }
+
+      // ======================================
+      // ACTIVE STATUS
+      // ======================================
+
+      if (
+        scholarship.status !==
+        "active"
+      ) {
+        cleanupUploadedFiles(
+          req.files
+        );
+
         return res.status(400).json({
           message:
             "This scholarship is currently closed.",
@@ -1214,37 +1727,94 @@ app.post(
       }
 
       // ======================================
-      // PREVENT DUPLICATE APPLICATION
+      // DEADLINE CHECK
+      // ======================================
+
+      const currentTime =
+        new Date();
+
+      const scholarshipDeadline =
+        new Date(
+          scholarship.deadline
+        );
+
+      if (
+        scholarshipDeadline <
+        currentTime
+      ) {
+        cleanupUploadedFiles(
+          req.files
+        );
+
+        return res.status(400).json({
+          message:
+            "The application deadline for this scholarship has passed.",
+        });
+      }
+
+      // ======================================
+      // DUPLICATE APPLICATION
       // ======================================
 
       const existingApplication =
         await Application.findOne({
-          student: req.user.id,
-          scholarship: scholarshipId,
+          student:
+            req.user.id,
+
+          scholarship:
+            scholarshipId,
         });
 
-      if (existingApplication) {
+      if (
+        existingApplication
+      ) {
+        cleanupUploadedFiles(
+          req.files
+        );
+
         return res.status(400).json({
           message:
             "You have already applied for this scholarship.",
         });
       }
 
-      const user = await User.findById(
-        req.user.id
-      ).select("fullName email");
+      // ======================================
+      // STUDENT ACCOUNT
+      // ======================================
+
+      const user =
+        await User.findById(
+          req.user.id
+        ).select(
+          "fullName email"
+        );
 
       if (!user) {
+        cleanupUploadedFiles(
+          req.files
+        );
+
         return res.status(404).json({
-          message: "Student account not found.",
+          message:
+            "Student account not found.",
         });
       }
 
-      const profile = await StudentProfile.findOne({
-        student: req.user.id,
-      });
+      // ======================================
+      // STUDENT PROFILE
+      // ======================================
+
+      const profile =
+        await StudentProfile.findOne({
+          student:
+            req.user.id,
+        });
 
       if (!profile) {
+        cleanupUploadedFiles(
+          req.files
+        );
+
         return res.status(400).json({
           message:
             "Please complete your student profile before applying.",
@@ -1252,139 +1822,251 @@ app.post(
       }
 
       // ======================================
-      // BACKEND ELIGIBILITY CHECK
+      // PROFILE COMPLETENESS
       // ======================================
 
-      const eligibilityReasons = [];
-
       if (
-        scholarship.minimumGPA > 0 &&
-        (profile.gpa === undefined ||
-          profile.gpa === null ||
-          profile.gpa < scholarship.minimumGPA)
+        !profile.university ||
+        !profile.course ||
+        profile.academicYear ===
+          undefined ||
+        profile.academicYear ===
+          null ||
+        profile.gpa ===
+          undefined ||
+        profile.gpa ===
+          null
+      ) {
+        cleanupUploadedFiles(
+          req.files
+        );
+
+        return res.status(400).json({
+          message:
+            "Please complete your student profile before applying.",
+        });
+      }
+
+      // ======================================
+      // ELIGIBILITY
+      // ======================================
+
+      const eligibilityReasons =
+        [];
+
+      // GPA
+      if (
+        scholarship.minimumGPA >
+          0 &&
+        profile.gpa <
+          scholarship.minimumGPA
       ) {
         eligibilityReasons.push(
-          `Minimum GPA required is ${scholarship.minimumGPA}. Your GPA is ${
-            profile.gpa ?? "not provided"
-          }.`
+          `Minimum GPA required is ${scholarship.minimumGPA}. Your GPA is ${profile.gpa}.`
         );
       }
 
+      // Academic year
       if (
         scholarship.requiredAcademicYear &&
         profile.academicYear !==
           scholarship.requiredAcademicYear
       ) {
         eligibilityReasons.push(
-          `Required academic year is Year ${scholarship.requiredAcademicYear}. Your academic year is Year ${
-            profile.academicYear ?? "not provided"
-          }.`
+          `Required academic year is Year ${scholarship.requiredAcademicYear}. Your academic year is Year ${profile.academicYear}.`
         );
       }
 
+      // Course
       if (
         scholarship.requiredCourse &&
-        scholarship.requiredCourse.trim() !== ""
+        scholarship.requiredCourse
+          .trim() !== ""
       ) {
-        const studentCourse = (
-          profile.course || ""
-        )
-          .trim()
-          .toLowerCase();
+        const studentCourse =
+          profile.course
+            .trim()
+            .toLowerCase();
 
         const requiredCourse =
           scholarship.requiredCourse
             .trim()
             .toLowerCase();
 
-        if (studentCourse !== requiredCourse) {
+        if (
+          studentCourse !==
+          requiredCourse
+        ) {
           eligibilityReasons.push(
-            `Required course is ${scholarship.requiredCourse}. Your course is ${
-              profile.course || "not provided"
-            }.`
+            `Required course is ${scholarship.requiredCourse}. Your course is ${profile.course}.`
           );
         }
       }
 
-      if (eligibilityReasons.length > 0) {
+      if (
+        eligibilityReasons.length >
+        0
+      ) {
+        cleanupUploadedFiles(
+          req.files
+        );
+
         return res.status(403).json({
           message:
             "You are not eligible to apply for this scholarship.",
-          reasons: eligibilityReasons,
+
+          reasons:
+            eligibilityReasons,
         });
       }
 
       // ======================================
-      // STATEMENT VALIDATION
+      // STATEMENT
       // ======================================
 
       if (
         !statement ||
-        statement.trim() === ""
+        statement.trim() ===
+          ""
       ) {
+        cleanupUploadedFiles(
+          req.files
+        );
+
         return res.status(400).json({
-          message: "Statement of purpose is required.",
+          message:
+            "Statement of purpose is required.",
+        });
+      }
+
+      const cleanedStatement =
+        statement.trim();
+
+      if (
+        cleanedStatement.length <
+        20
+      ) {
+        cleanupUploadedFiles(
+          req.files
+        );
+
+        return res.status(400).json({
+          message:
+            "Statement of purpose must contain at least 20 characters.",
         });
       }
 
       // ======================================
-      // UPLOADED DOCUMENT METADATA
+      // DOCUMENT METADATA
       // ======================================
 
-      const uploadedDocuments = (
-        req.files || []
-      ).map((file) => ({
-        originalName: file.originalname,
-        fileName: file.filename,
-        filePath: file.path,
-        fileType: file.mimetype,
-        fileSize: file.size,
-      }));
+      const uploadedDocuments =
+        (
+          req.files ||
+          []
+        ).map(
+          (file) => ({
+            originalName:
+              file.originalname,
+
+            fileName:
+              file.filename,
+
+            filePath:
+              file.path,
+
+            fileType:
+              file.mimetype,
+
+            fileSize:
+              file.size,
+          })
+        );
 
       // ======================================
       // CREATE APPLICATION
       // ======================================
 
-      const application = new Application({
-        student: req.user.id,
-        scholarship: scholarshipId,
+      const application =
+        new Application({
+          student:
+            req.user.id,
 
-        fullName: user.fullName,
-        email: user.email,
+          scholarship:
+            scholarshipId,
 
-        university: profile.university,
-        course: profile.course,
-        academicYear: profile.academicYear,
+          fullName:
+            user.fullName,
 
-        statement: statement.trim(),
+          email:
+            user.email,
 
-        documents: uploadedDocuments,
+          university:
+            profile.university,
 
-        status: "submitted",
-      });
+          course:
+            profile.course,
+
+          academicYear:
+            profile.academicYear,
+
+          statement:
+            cleanedStatement,
+
+          documents:
+            uploadedDocuments,
+
+          status:
+            "submitted",
+        });
 
       await application.save();
 
+      // From this point the files belong
+      // to a valid saved application.
+      applicationSaved =
+        true;
+
       return res.status(201).json({
-        message: "Application submitted successfully!",
+        message:
+          "Application submitted successfully!",
+
         application,
       });
     } catch (error) {
+      // If the application failed before
+      // being stored in MongoDB, remove
+      // any newly uploaded files.
+      if (
+        !applicationSaved
+      ) {
+        cleanupUploadedFiles(
+          req.files
+        );
+      }
+
+      console.error(
+        "Application submission error:",
+        error
+      );
+
       return res.status(500).json({
-        message: "Failed to submit application.",
-        error: error.message,
+        message:
+          "Failed to submit application.",
       });
     }
   }
 );
 
 // ==========================================
-// SECURE APPLICATION DOCUMENT ACCESS
+// SECURE DOCUMENT ACCESS
 // ==========================================
 
 app.get(
   "/api/applications/:applicationId/documents/:documentId",
+
   authMiddleware,
+
   roleMiddleware([
     "student",
     "provider",
@@ -1398,32 +2080,37 @@ app.get(
         documentId,
       } = req.params;
 
-      const application = await Application.findById(
-        applicationId
-      ).populate("scholarship");
+      const application =
+        await Application.findById(
+          applicationId
+        ).populate(
+          "scholarship"
+        );
 
       if (!application) {
         return res.status(404).json({
-          message: "Application not found.",
+          message:
+            "Application not found.",
         });
       }
 
-      const document = application.documents.id(
-        documentId
-      );
+      const document =
+        application.documents.id(
+          documentId
+        );
 
       if (!document) {
         return res.status(404).json({
-          message: "Document not found.",
+          message:
+            "Document not found.",
         });
       }
 
-      // ======================================
-      // STUDENT ACCESS
-      // ======================================
-
+      // Student can only access
+      // own documents.
       if (
-        req.user.role === "student" &&
+        req.user.role ===
+          "student" &&
         application.student.toString() !==
           req.user.id
       ) {
@@ -1433,11 +2120,12 @@ app.get(
         });
       }
 
-      // ======================================
-      // PROVIDER ACCESS
-      // ======================================
-
-      if (req.user.role === "provider") {
+      // Provider can only access documents
+      // belonging to their scholarships.
+      if (
+        req.user.role ===
+        "provider"
+      ) {
         const scholarship =
           application.scholarship;
 
@@ -1454,38 +2142,46 @@ app.get(
         }
       }
 
-      const uploadsDirectory = path.resolve(
-        __dirname,
-        "uploads"
-      );
+      const uploadsDirectory =
+        path.resolve(
+          __dirname,
+          "uploads"
+        );
 
-      const safeFileName = path.basename(
-        document.fileName
-      );
+      const safeFileName =
+        path.basename(
+          document.fileName
+        );
 
-      const filePath = path.resolve(
-        uploadsDirectory,
-        safeFileName
-      );
+      const filePath =
+        path.resolve(
+          uploadsDirectory,
+          safeFileName
+        );
 
-      // Prevent path traversal
+      // Path traversal protection
       if (
-        path.dirname(filePath) !==
+        path.dirname(
+          filePath
+        ) !==
         uploadsDirectory
       ) {
         return res.status(400).json({
-          message: "Invalid document path.",
+          message:
+            "Invalid document path.",
         });
       }
 
       res.setHeader(
         "Content-Type",
+
         document.fileType ||
           "application/octet-stream"
       );
 
       res.setHeader(
         "Content-Disposition",
+
         `inline; filename="${encodeURIComponent(
           document.originalName
         )}"`
@@ -1493,6 +2189,7 @@ app.get(
 
       return res.sendFile(
         filePath,
+
         (error) => {
           if (
             error &&
@@ -1507,8 +2204,11 @@ app.get(
       );
     } catch (error) {
       return res.status(500).json({
-        message: "Failed to open document.",
-        error: error.message,
+        message:
+          "Failed to open document.",
+
+        error:
+          error.message,
       });
     }
   }
@@ -1520,18 +2220,27 @@ app.get(
 
 app.get(
   "/api/applications/my",
+
   authMiddleware,
-  roleMiddleware(["student"]),
+
+  roleMiddleware([
+    "student",
+  ]),
 
   async (req, res) => {
     try {
-      const applications = await Application.find({
-        student: req.user.id,
-      })
-        .populate("scholarship")
-        .sort({
-          createdAt: -1,
-        });
+      const applications =
+        await Application.find({
+          student:
+            req.user.id,
+        })
+          .populate(
+            "scholarship"
+          )
+          .sort({
+            createdAt:
+              -1,
+          });
 
       return res.status(200).json({
         applications,
@@ -1540,19 +2249,23 @@ app.get(
       return res.status(500).json({
         message:
           "Failed to fetch your applications.",
-        error: error.message,
+
+        error:
+          error.message,
       });
     }
   }
 );
 
 // ==========================================
-// PROVIDER / ADMIN - VIEW APPLICATIONS
+// PROVIDER / ADMIN - APPLICATIONS
 // ==========================================
 
 app.get(
   "/api/applications/provider",
+
   authMiddleware,
+
   roleMiddleware([
     "provider",
     "admin",
@@ -1562,44 +2275,58 @@ app.get(
     try {
       let applications;
 
-      // Admin can see every application
-      if (req.user.role === "admin") {
-        applications = await Application.find()
-          .populate(
-            "student",
-            "fullName email"
-          )
-          .populate("scholarship")
-          .sort({
-            createdAt: -1,
-          });
+      if (
+        req.user.role ===
+        "admin"
+      ) {
+        applications =
+          await Application.find()
+            .populate(
+              "student",
+              "fullName email"
+            )
+            .populate(
+              "scholarship"
+            )
+            .sort({
+              createdAt:
+                -1,
+            });
       } else {
-        // Provider only sees applications
-        // for scholarships they own.
         const providerScholarships =
           await Scholarship.find({
-            providerUser: req.user.id,
-          }).select("_id");
+            providerUser:
+              req.user.id,
+          }).select(
+            "_id"
+          );
 
         const scholarshipIds =
           providerScholarships.map(
-            (scholarship) =>
+            (
+              scholarship
+            ) =>
               scholarship._id
           );
 
-        applications = await Application.find({
-          scholarship: {
-            $in: scholarshipIds,
-          },
-        })
-          .populate(
-            "student",
-            "fullName email"
-          )
-          .populate("scholarship")
-          .sort({
-            createdAt: -1,
-          });
+        applications =
+          await Application.find({
+            scholarship: {
+              $in:
+                scholarshipIds,
+            },
+          })
+            .populate(
+              "student",
+              "fullName email"
+            )
+            .populate(
+              "scholarship"
+            )
+            .sort({
+              createdAt:
+                -1,
+            });
       }
 
       return res.status(200).json({
@@ -1607,20 +2334,25 @@ app.get(
       });
     } catch (error) {
       return res.status(500).json({
-        message: "Failed to fetch applications.",
-        error: error.message,
+        message:
+          "Failed to fetch applications.",
+
+        error:
+          error.message,
       });
     }
   }
 );
 
 // ==========================================
-// PROVIDER / ADMIN - UPDATE APPLICATION STATUS
+// UPDATE APPLICATION STATUS
 // ==========================================
 
 app.patch(
   "/api/applications/:id/status",
+
   authMiddleware,
+
   roleMiddleware([
     "provider",
     "admin",
@@ -1628,33 +2360,47 @@ app.patch(
 
   async (req, res) => {
     try {
-      const { status } = req.body;
+      const {
+        status,
+      } = req.body;
 
-      const allowedStatuses = [
-        "submitted",
-        "under review",
-        "selected",
-        "rejected",
-      ];
+      const allowedStatuses =
+        [
+          "submitted",
+          "under review",
+          "selected",
+          "rejected",
+        ];
 
-      if (!allowedStatuses.includes(status)) {
+      if (
+        !allowedStatuses.includes(
+          status
+        )
+      ) {
         return res.status(400).json({
-          message: "Invalid application status.",
+          message:
+            "Invalid application status.",
         });
       }
 
-      const application = await Application.findById(
-        req.params.id
-      ).populate("scholarship");
+      const application =
+        await Application.findById(
+          req.params.id
+        ).populate(
+          "scholarship"
+        );
 
       if (!application) {
         return res.status(404).json({
-          message: "Application not found.",
+          message:
+            "Application not found.",
         });
       }
 
-      // Provider ownership check
-      if (req.user.role === "provider") {
+      if (
+        req.user.role ===
+        "provider"
+      ) {
         const scholarship =
           application.scholarship;
 
@@ -1671,20 +2417,24 @@ app.patch(
         }
       }
 
-      application.status = status;
+      application.status =
+        status;
 
       await application.save();
 
       return res.status(200).json({
         message:
           "Application status updated successfully!",
+
         application,
       });
     } catch (error) {
       return res.status(500).json({
         message:
           "Failed to update application status.",
-        error: error.message,
+
+        error:
+          error.message,
       });
     }
   }
@@ -1696,8 +2446,12 @@ app.patch(
 
 app.get(
   "/api/admin/dashboard",
+
   authMiddleware,
-  roleMiddleware(["admin"]),
+
+  roleMiddleware([
+    "admin",
+  ]),
 
   async (req, res) => {
     try {
@@ -1709,29 +2463,34 @@ app.get(
         activeScholarships,
         closedScholarships,
         totalApplications,
-      ] = await Promise.all([
-        User.countDocuments(),
+      ] =
+        await Promise.all([
+          User.countDocuments(),
 
-        User.countDocuments({
-          role: "student",
-        }),
+          User.countDocuments({
+            role:
+              "student",
+          }),
 
-        User.countDocuments({
-          role: "provider",
-        }),
+          User.countDocuments({
+            role:
+              "provider",
+          }),
 
-        Scholarship.countDocuments(),
+          Scholarship.countDocuments(),
 
-        Scholarship.countDocuments({
-          status: "active",
-        }),
+          Scholarship.countDocuments({
+            status:
+              "active",
+          }),
 
-        Scholarship.countDocuments({
-          status: "closed",
-        }),
+          Scholarship.countDocuments({
+            status:
+              "closed",
+          }),
 
-        Application.countDocuments(),
-      ]);
+          Application.countDocuments(),
+        ]);
 
       return res.status(200).json({
         statistics: {
@@ -1748,7 +2507,9 @@ app.get(
       return res.status(500).json({
         message:
           "Failed to load admin dashboard.",
-        error: error.message,
+
+        error:
+          error.message,
       });
     }
   }
@@ -1760,24 +2521,35 @@ app.get(
 
 app.get(
   "/api/admin/users",
+
   authMiddleware,
-  roleMiddleware(["admin"]),
+
+  roleMiddleware([
+    "admin",
+  ]),
 
   async (req, res) => {
     try {
-      const users = await User.find()
-        .select("-password")
-        .sort({
-          createdAt: -1,
-        });
+      const users =
+        await User.find()
+          .select(
+            "-password"
+          )
+          .sort({
+            createdAt:
+              -1,
+          });
 
       return res.status(200).json({
         users,
       });
     } catch (error) {
       return res.status(500).json({
-        message: "Failed to fetch users.",
-        error: error.message,
+        message:
+          "Failed to fetch users.",
+
+        error:
+          error.message,
       });
     }
   }
@@ -1794,16 +2566,24 @@ app.use(
     res,
     next
   ) => {
-    // Multer errors
-    if (error instanceof multer.MulterError) {
-      if (error.code === "LIMIT_FILE_SIZE") {
+    if (
+      error instanceof
+      multer.MulterError
+    ) {
+      if (
+        error.code ===
+        "LIMIT_FILE_SIZE"
+      ) {
         return res.status(400).json({
           message:
             "Each document must be 5 MB or smaller.",
         });
       }
 
-      if (error.code === "LIMIT_FILE_COUNT") {
+      if (
+        error.code ===
+        "LIMIT_FILE_COUNT"
+      ) {
         return res.status(400).json({
           message:
             "You can upload a maximum of 5 documents.",
@@ -1811,21 +2591,24 @@ app.use(
       }
 
       return res.status(400).json({
-        message: `File upload error: ${error.message}`,
+        message:
+          `File upload error: ${error.message}`,
       });
     }
 
-    // Invalid document type
     if (
       error.message ===
       "Only PDF, JPG, JPEG, PNG, DOC and DOCX files are allowed."
     ) {
       return res.status(400).json({
-        message: error.message,
+        message:
+          error.message,
       });
     }
 
-    console.error(error);
+    console.error(
+      error
+    );
 
     return res.status(500).json({
       message:
@@ -1838,8 +2621,12 @@ app.use(
 // START SERVER
 // ==========================================
 
-app.listen(PORT, () => {
-  console.log(
-    `Server running on http://localhost:${PORT}`
-  );
-});
+app.listen(
+  PORT,
+
+  () => {
+    console.log(
+      `Server running on http://localhost:${PORT}`
+    );
+  }
+);
