@@ -33,8 +33,6 @@ const JWT_SECRET = process.env.JWT_SECRET;
 app.use(cors());
 app.use(express.json());
 
-// Uploaded documents are NOT publicly exposed.
-
 // ==========================================
 // DATABASE CONNECTION
 // ==========================================
@@ -75,7 +73,6 @@ app.post(
         password,
       } = req.body;
 
-      // Required fields
       if (
         !fullName ||
         !email ||
@@ -87,14 +84,12 @@ app.post(
         });
       }
 
-      // Clean input
       fullName = fullName.trim();
 
       email = email
         .trim()
         .toLowerCase();
 
-      // Validate full name
       if (fullName.length < 2) {
         return res.status(400).json({
           message:
@@ -102,7 +97,6 @@ app.post(
         });
       }
 
-      // Validate email
       const emailPattern =
         /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -115,7 +109,6 @@ app.post(
         });
       }
 
-      // Validate password
       if (password.length < 6) {
         return res.status(400).json({
           message:
@@ -123,7 +116,6 @@ app.post(
         });
       }
 
-      // Check existing account
       const existingUser =
         await User.findOne({
           email,
@@ -136,15 +128,12 @@ app.post(
         });
       }
 
-      // Hash password
       const hashedPassword =
         await bcrypt.hash(
           password,
           10
         );
 
-      // Public registration always creates
-      // a student account.
       const user = new User({
         fullName,
         email,
@@ -192,7 +181,6 @@ app.post(
         password,
       } = req.body;
 
-      // Required fields
       if (
         !email ||
         !password
@@ -203,12 +191,10 @@ app.post(
         });
       }
 
-      // Clean email
       email = email
         .trim()
         .toLowerCase();
 
-      // Validate email format
       const emailPattern =
         /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -221,7 +207,6 @@ app.post(
         });
       }
 
-      // Find user
       const user =
         await User.findOne({
           email,
@@ -234,7 +219,6 @@ app.post(
         });
       }
 
-      // Check password
       const passwordMatch =
         await bcrypt.compare(
           password,
@@ -248,7 +232,6 @@ app.post(
         });
       }
 
-      // Create JWT
       const token = jwt.sign(
         {
           id: user._id,
@@ -335,6 +318,7 @@ app.get(
 
 // ==========================================
 // STUDENT PROFILE - CREATE / UPDATE
+// STEP 30.6B VALIDATION
 // ==========================================
 
 app.put(
@@ -344,12 +328,114 @@ app.put(
 
   async (req, res) => {
     try {
-      const {
+      let {
         university,
         course,
         academicYear,
         gpa,
       } = req.body;
+
+      // ======================================
+      // REQUIRED FIELDS
+      // ======================================
+
+      if (
+        university === undefined ||
+        course === undefined ||
+        academicYear === undefined ||
+        gpa === undefined ||
+        university === null ||
+        course === null ||
+        academicYear === null ||
+        gpa === null
+      ) {
+        return res.status(400).json({
+          message:
+            "University, course, academic year and GPA are required.",
+        });
+      }
+
+      // ======================================
+      // CLEAN TEXT INPUT
+      // ======================================
+
+      university =
+        String(university).trim();
+
+      course =
+        String(course).trim();
+
+      if (!university) {
+        return res.status(400).json({
+          message:
+            "University is required.",
+        });
+      }
+
+      if (!course) {
+        return res.status(400).json({
+          message:
+            "Course is required.",
+        });
+      }
+
+      // ======================================
+      // CONVERT NUMERIC VALUES
+      // ======================================
+
+      if (
+        academicYear === "" ||
+        gpa === ""
+      ) {
+        return res.status(400).json({
+          message:
+            "Academic year and GPA are required.",
+        });
+      }
+
+      const academicYearNumber =
+        Number(academicYear);
+
+      const gpaNumber =
+        Number(gpa);
+
+      // ======================================
+      // ACADEMIC YEAR VALIDATION
+      // ======================================
+
+      if (
+        !Number.isInteger(
+          academicYearNumber
+        ) ||
+        academicYearNumber < 1 ||
+        academicYearNumber > 6
+      ) {
+        return res.status(400).json({
+          message:
+            "Academic year must be a whole number between 1 and 6.",
+        });
+      }
+
+      // ======================================
+      // GPA VALIDATION
+      // ======================================
+
+      if (
+        !Number.isFinite(
+          gpaNumber
+        ) ||
+        gpaNumber < 0 ||
+        gpaNumber > 4
+      ) {
+        return res.status(400).json({
+          message:
+            "GPA must be between 0.00 and 4.00.",
+        });
+      }
+
+      // ======================================
+      // SAVE PROFILE
+      // ======================================
 
       const profile =
         await StudentProfile.findOneAndUpdate(
@@ -361,8 +447,10 @@ app.put(
             student: req.user.id,
             university,
             course,
-            academicYear,
-            gpa,
+            academicYear:
+              academicYearNumber,
+            gpa:
+              gpaNumber,
           },
 
           {
@@ -379,11 +467,14 @@ app.put(
         profile,
       });
     } catch (error) {
+      console.error(
+        "Student profile save error:",
+        error
+      );
+
       return res.status(500).json({
         message:
           "Failed to save student profile.",
-
-        error: error.message,
       });
     }
   }
@@ -533,8 +624,7 @@ app.get(
       let scholarships;
 
       if (
-        req.user.role ===
-        "admin"
+        req.user.role === "admin"
       ) {
         scholarships =
           await Scholarship.find().sort({
@@ -611,7 +701,7 @@ app.get(
 
       const reasons = [];
 
-      // GPA
+      // GPA CHECK
       if (
         scholarship.minimumGPA >
           0 &&
@@ -629,7 +719,7 @@ app.get(
         );
       }
 
-      // Academic year
+      // ACADEMIC YEAR CHECK
       if (
         scholarship.requiredAcademicYear &&
         profile.academicYear !==
@@ -643,7 +733,7 @@ app.get(
         );
       }
 
-      // Course
+      // COURSE CHECK
       if (
         scholarship.requiredCourse &&
         scholarship.requiredCourse.trim() !==
@@ -688,13 +778,10 @@ app.get(
         studentProfile: {
           university:
             profile.university,
-
           course:
             profile.course,
-
           academicYear:
             profile.academicYear,
-
           gpa:
             profile.gpa,
         },
@@ -703,10 +790,8 @@ app.get(
           minimumGPA:
             scholarship.minimumGPA ||
             0,
-
           requiredAcademicYear:
             scholarship.requiredAcademicYear,
-
           requiredCourse:
             scholarship.requiredCourse ||
             "",
@@ -936,9 +1021,8 @@ app.patch(
 
   async (req, res) => {
     try {
-      const {
-        status,
-      } = req.body;
+      const { status } =
+        req.body;
 
       if (
         ![
@@ -1005,13 +1089,8 @@ app.patch(
 
 app.post(
   "/api/applications",
-
   authMiddleware,
-
-  roleMiddleware([
-    "student",
-  ]),
-
+  roleMiddleware(["student"]),
   upload.array(
     "documents",
     5
@@ -1046,12 +1125,11 @@ app.post(
         });
       }
 
-      // Prevent duplicate application
+      // PREVENT DUPLICATE APPLICATION
       const existingApplication =
         await Application.findOne({
           student:
             req.user.id,
-
           scholarship:
             scholarshipId,
         });
@@ -1093,7 +1171,7 @@ app.post(
       }
 
       // ======================================
-      // CHECK ELIGIBILITY
+      // BACKEND ELIGIBILITY CHECK
       // ======================================
 
       const eligibilityReasons =
@@ -1171,7 +1249,7 @@ app.post(
         });
       }
 
-      // Validate statement
+      // STATEMENT VALIDATION
       if (
         !statement ||
         statement.trim() === ""
@@ -1182,23 +1260,19 @@ app.post(
         });
       }
 
-      // Store uploaded document metadata
+      // UPLOADED DOCUMENT METADATA
       const uploadedDocuments = (
         req.files || []
       ).map(
         (file) => ({
           originalName:
             file.originalname,
-
           fileName:
             file.filename,
-
           filePath:
             file.path,
-
           fileType:
             file.mimetype,
-
           fileSize:
             file.size,
         })
@@ -1263,9 +1337,7 @@ app.post(
 
 app.get(
   "/api/applications/:applicationId/documents/:documentId",
-
   authMiddleware,
-
   roleMiddleware([
     "student",
     "provider",
@@ -1305,24 +1377,20 @@ app.get(
         });
       }
 
-      // Student can only view own document
+      // STUDENT ACCESS
       if (
         req.user.role ===
-        "student"
-      ) {
-        if (
-          application.student.toString() !==
+        "student" &&
+        application.student.toString() !==
           req.user.id
-        ) {
-          return res.status(403).json({
-            message:
-              "You are not allowed to view this document.",
-          });
-        }
+      ) {
+        return res.status(403).json({
+          message:
+            "You are not allowed to view this document.",
+        });
       }
 
-      // Provider can only view documents
-      // belonging to their scholarships.
+      // PROVIDER ACCESS
       if (
         req.user.role ===
         "provider"
@@ -1418,12 +1486,8 @@ app.get(
 
 app.get(
   "/api/applications/my",
-
   authMiddleware,
-
-  roleMiddleware([
-    "student",
-  ]),
+  roleMiddleware(["student"]),
 
   async (req, res) => {
     try {
@@ -1460,9 +1524,7 @@ app.get(
 
 app.get(
   "/api/applications/provider",
-
   authMiddleware,
-
   roleMiddleware([
     "provider",
     "admin",
@@ -1541,9 +1603,7 @@ app.get(
 
 app.patch(
   "/api/applications/:id/status",
-
   authMiddleware,
-
   roleMiddleware([
     "provider",
     "admin",
@@ -1551,9 +1611,8 @@ app.patch(
 
   async (req, res) => {
     try {
-      const {
-        status,
-      } = req.body;
+      const { status } =
+        req.body;
 
       const allowedStatuses = [
         "submitted",
@@ -1636,12 +1695,8 @@ app.patch(
 
 app.get(
   "/api/admin/dashboard",
-
   authMiddleware,
-
-  roleMiddleware([
-    "admin",
-  ]),
+  roleMiddleware(["admin"]),
 
   async (req, res) => {
     try {
@@ -1707,20 +1762,14 @@ app.get(
 
 app.get(
   "/api/admin/users",
-
   authMiddleware,
-
-  roleMiddleware([
-    "admin",
-  ]),
+  roleMiddleware(["admin"]),
 
   async (req, res) => {
     try {
       const users =
         await User.find()
-          .select(
-            "-password"
-          )
+          .select("-password")
           .sort({
             createdAt: -1,
           });
@@ -1751,7 +1800,6 @@ app.use(
     res,
     next
   ) => {
-    // Multer errors
     if (
       error instanceof
       multer.MulterError
@@ -1782,7 +1830,6 @@ app.use(
       });
     }
 
-    // Invalid file type
     if (
       error.message ===
       "Only PDF, JPG, JPEG, PNG, DOC and DOCX files are allowed."
