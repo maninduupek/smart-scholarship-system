@@ -1,201 +1,399 @@
 import { useState } from "react";
+import {
+  Link,
+  useNavigate,
+} from "react-router-dom";
 
 function Login() {
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+  const navigate = useNavigate();
 
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
+  const [formData, setFormData] =
+    useState({
+      email: "",
+      password: "",
     });
+
+  const [
+    showPassword,
+    setShowPassword,
+  ] = useState(false);
+
+  const [error, setError] =
+    useState("");
+
+  const [loading, setLoading] =
+    useState(false);
+
+  // ==========================================
+  // HANDLE INPUT CHANGE
+  // ==========================================
+
+  const handleChange = (event) => {
+    const {
+      name,
+      value,
+    } = event.target;
+
+    setFormData(
+      (previous) => ({
+        ...previous,
+        [name]: value,
+      })
+    );
+
+    setError("");
   };
 
-  // Login user
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // ==========================================
+  // LOGIN
+  // ==========================================
 
-    setMessage("");
+  const handleSubmit = async (
+    event
+  ) => {
+    event.preventDefault();
+
     setError("");
 
-    try {
-      const response = await fetch(
-        "http://localhost:5000/api/users/login",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(formData),
-        }
+    const email =
+      formData.email
+        .trim()
+        .toLowerCase();
+
+    const password =
+      formData.password;
+
+    if (!email || !password) {
+      setError(
+        "Please enter your email and password."
       );
 
-      const data = await response.json();
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response =
+        await fetch(
+          "http://localhost:5000/api/users/login",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              email,
+              password,
+            }),
+          }
+        );
+
+      const data =
+        await response.json();
 
       if (!response.ok) {
-        setError(data.message || "Login failed.");
+        setError(
+          data.message ||
+            "Login failed."
+        );
+
         return;
       }
 
-      // Save JWT token in browser
-      localStorage.setItem("token", data.token);
+      // ======================================
+      // SAVE LOGIN INFORMATION
+      // ======================================
 
-      // Save logged-in user information
-      localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem(
+        "token",
+        data.token
+      );
 
-      setMessage(`Welcome, ${data.user.fullName}!`);
+      localStorage.setItem(
+        "user",
+        JSON.stringify(
+          data.user
+        )
+      );
 
-      setFormData({
-        email: "",
-        password: "",
-      });
+      // ======================================
+      // ROLE-BASED REDIRECTION
+      // ======================================
 
-      console.log("Login successful");
-      console.log("Token:", data.token);
-      console.log("User:", data.user);
+      if (
+        data.user.role ===
+        "admin"
+      ) {
+        navigate("/admin");
+      } else if (
+        data.user.role ===
+        "provider"
+      ) {
+        navigate(
+          "/my-scholarships"
+        );
+      } else {
+        navigate(
+          "/scholarships"
+        );
+      }
+
+      // Refresh so Navbar immediately
+      // receives the new login state.
+      window.location.reload();
     } catch (error) {
       setError(
-        "Unable to connect to the server. Please make sure the backend is running."
+        "Unable to connect to the server. Please try again."
       );
-    }
-  };
-
-  // Test basic protected route
-  const testProtectedRoute = async () => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      setError("No login token found.");
-      return;
-    }
-
-    setMessage("");
-    setError("");
-
-    try {
-      const response = await fetch(
-        "http://localhost:5000/api/protected",
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.message || "Access denied.");
-        return;
-      }
-
-      setMessage(data.message);
-
-      console.log("Protected route response:", data);
-    } catch (error) {
-      setError("Unable to connect to the backend.");
-    }
-  };
-
-  // Test student-only route
-  const testStudentRoute = async () => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      setError("No login token found.");
-      return;
-    }
-
-    setMessage("");
-    setError("");
-
-    try {
-      const response = await fetch(
-        "http://localhost:5000/api/student-test",
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.message || "Access denied.");
-        return;
-      }
-
-      setMessage(data.message);
-
-      console.log("Student route response:", data);
-    } catch (error) {
-      setError("Unable to connect to the backend.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div>
-      <h1>Login</h1>
+    <main className="auth-page">
+      <div className="auth-wrapper">
 
-      {message && <p>{message}</p>}
+        {/* ==================================
+            LEFT INFORMATION AREA
+            ================================== */}
 
-      {error && <p>{error}</p>}
+        <section className="auth-info">
+          <div className="auth-info-content">
+            <span className="auth-eyebrow">
+              Smart Scholarship System
+            </span>
 
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Email</label>
+            <h1>
+              Find opportunities.
+              <br />
+              Build your future.
+            </h1>
 
-          <input
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-          />
-        </div>
+            <p>
+              Access scholarships,
+              manage your applications,
+              and track your progress
+              through one centralized
+              platform.
+            </p>
 
-        <div>
-          <label>Password</label>
+            <div className="auth-feature-list">
+              <div className="auth-feature">
+                <span className="auth-feature-icon">
+                  ✓
+                </span>
 
-          <input
-            type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            required
-          />
-        </div>
+                <div>
+                  <strong>
+                    Discover Scholarships
+                  </strong>
 
-        <button type="submit">Login</button>
-      </form>
+                  <p>
+                    Search and explore
+                    available opportunities.
+                  </p>
+                </div>
+              </div>
 
-      <br />
+              <div className="auth-feature">
+                <span className="auth-feature-icon">
+                  ✓
+                </span>
 
-      <button type="button" onClick={testProtectedRoute}>
-        Test Protected Route
-      </button>
+                <div>
+                  <strong>
+                    Check Eligibility
+                  </strong>
 
-      <br />
-      <br />
+                  <p>
+                    Quickly see whether
+                    you meet scholarship
+                    requirements.
+                  </p>
+                </div>
+              </div>
 
-      <button type="button" onClick={testStudentRoute}>
-        Test Student Route
-      </button>
+              <div className="auth-feature">
+                <span className="auth-feature-icon">
+                  ✓
+                </span>
 
+                <div>
+                  <strong>
+                    Track Applications
+                  </strong>
 
+                  <p>
+                    Follow your
+                    application status
+                    from submission to
+                    final decision.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
-    </div>
+        {/* ==================================
+            LOGIN CARD
+            ================================== */}
+
+        <section className="auth-card">
+          <div className="auth-card-header">
+            <div className="auth-card-icon">
+              S
+            </div>
+
+            <h2>
+              Welcome Back
+            </h2>
+
+            <p>
+              Sign in to continue to
+              your scholarship account.
+            </p>
+          </div>
+
+          {error && (
+            <div
+              className="alert alert-error"
+              role="alert"
+            >
+              {error}
+            </div>
+          )}
+
+          <form
+            onSubmit={
+              handleSubmit
+            }
+            className="auth-form"
+          >
+            {/* EMAIL */}
+
+            <div className="form-group">
+              <label htmlFor="email">
+                Email Address
+              </label>
+
+              <input
+                id="email"
+                type="email"
+                name="email"
+                placeholder="Enter your email"
+                value={
+                  formData.email
+                }
+                onChange={
+                  handleChange
+                }
+                autoComplete="email"
+                disabled={
+                  loading
+                }
+              />
+            </div>
+
+            {/* PASSWORD */}
+
+            <div className="form-group">
+              <label htmlFor="password">
+                Password
+              </label>
+
+              <div className="password-field">
+                <input
+                  id="password"
+                  type={
+                    showPassword
+                      ? "text"
+                      : "password"
+                  }
+                  name="password"
+                  placeholder="Enter your password"
+                  value={
+                    formData.password
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  autoComplete="current-password"
+                  disabled={
+                    loading
+                  }
+                />
+
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() =>
+                    setShowPassword(
+                      (previous) =>
+                        !previous
+                    )
+                  }
+                  disabled={
+                    loading
+                  }
+                  aria-label={
+                    showPassword
+                      ? "Hide password"
+                      : "Show password"
+                  }
+                >
+                  {showPassword
+                    ? "Hide"
+                    : "Show"}
+                </button>
+              </div>
+            </div>
+
+            {/* LOGIN BUTTON */}
+
+            <button
+              type="submit"
+              className="btn btn-primary auth-submit-button"
+              disabled={
+                loading
+              }
+            >
+              {loading
+                ? "Signing In..."
+                : "Sign In"}
+            </button>
+          </form>
+
+          <div className="auth-divider">
+            <span>
+              New to Smart Scholarship?
+            </span>
+          </div>
+
+          <p className="auth-switch">
+            Don't have an account?{" "}
+            <Link to="/register">
+              Create an account
+            </Link>
+          </p>
+
+          <div className="auth-security-note">
+            <span>🔒</span>
+
+            <p>
+              Your account information
+              is securely protected.
+            </p>
+          </div>
+        </section>
+      </div>
+    </main>
   );
 }
-
-
 
 export default Login;
