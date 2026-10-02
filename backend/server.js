@@ -34,8 +34,6 @@ app.use(cors());
 app.use(express.json());
 
 // Uploaded documents are NOT publicly exposed.
-// They can only be accessed through the
-// protected document API route.
 
 // ==========================================
 // DATABASE CONNECTION
@@ -71,12 +69,61 @@ app.post(
   "/api/users/register",
   async (req, res) => {
     try {
-      const {
+      let {
         fullName,
         email,
         password,
       } = req.body;
 
+      // Required fields
+      if (
+        !fullName ||
+        !email ||
+        !password
+      ) {
+        return res.status(400).json({
+          message:
+            "Full name, email and password are required.",
+        });
+      }
+
+      // Clean input
+      fullName = fullName.trim();
+
+      email = email
+        .trim()
+        .toLowerCase();
+
+      // Validate full name
+      if (fullName.length < 2) {
+        return res.status(400).json({
+          message:
+            "Please enter a valid full name.",
+        });
+      }
+
+      // Validate email
+      const emailPattern =
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      if (
+        !emailPattern.test(email)
+      ) {
+        return res.status(400).json({
+          message:
+            "Please enter a valid email address.",
+        });
+      }
+
+      // Validate password
+      if (password.length < 6) {
+        return res.status(400).json({
+          message:
+            "Password must contain at least 6 characters.",
+        });
+      }
+
+      // Check existing account
       const existingUser =
         await User.findOne({
           email,
@@ -85,23 +132,23 @@ app.post(
       if (existingUser) {
         return res.status(400).json({
           message:
-            "User with this email already exists",
+            "An account with this email already exists.",
         });
       }
 
+      // Hash password
       const hashedPassword =
         await bcrypt.hash(
           password,
           10
         );
 
+      // Public registration always creates
+      // a student account.
       const user = new User({
         fullName,
         email,
         password: hashedPassword,
-
-        // Public registration can only
-        // create student accounts.
         role: "student",
       });
 
@@ -109,7 +156,7 @@ app.post(
 
       return res.status(201).json({
         message:
-          "User registered successfully",
+          "User registered successfully!",
 
         user: {
           id: user._id,
@@ -119,11 +166,14 @@ app.post(
         },
       });
     } catch (error) {
+      console.error(
+        "Registration error:",
+        error
+      );
+
       return res.status(500).json({
         message:
-          "Registration failed",
-
-        error: error.message,
+          "Registration failed. Please try again.",
       });
     }
   }
@@ -137,11 +187,41 @@ app.post(
   "/api/users/login",
   async (req, res) => {
     try {
-      const {
+      let {
         email,
         password,
       } = req.body;
 
+      // Required fields
+      if (
+        !email ||
+        !password
+      ) {
+        return res.status(400).json({
+          message:
+            "Email and password are required.",
+        });
+      }
+
+      // Clean email
+      email = email
+        .trim()
+        .toLowerCase();
+
+      // Validate email format
+      const emailPattern =
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      if (
+        !emailPattern.test(email)
+      ) {
+        return res.status(400).json({
+          message:
+            "Please enter a valid email address.",
+        });
+      }
+
+      // Find user
       const user =
         await User.findOne({
           email,
@@ -150,10 +230,11 @@ app.post(
       if (!user) {
         return res.status(400).json({
           message:
-            "Invalid email or password",
+            "Invalid email or password.",
         });
       }
 
+      // Check password
       const passwordMatch =
         await bcrypt.compare(
           password,
@@ -163,10 +244,11 @@ app.post(
       if (!passwordMatch) {
         return res.status(400).json({
           message:
-            "Invalid email or password",
+            "Invalid email or password.",
         });
       }
 
+      // Create JWT
       const token = jwt.sign(
         {
           id: user._id,
@@ -181,7 +263,7 @@ app.post(
 
       return res.status(200).json({
         message:
-          "Login successful",
+          "Login successful!",
 
         token,
 
@@ -193,11 +275,14 @@ app.post(
         },
       });
     } catch (error) {
+      console.error(
+        "Login error:",
+        error
+      );
+
       return res.status(500).json({
         message:
-          "Login failed",
-
-        error: error.message,
+          "Login failed. Please try again.",
       });
     }
   }
@@ -526,10 +611,7 @@ app.get(
 
       const reasons = [];
 
-      // ======================================
-      // GPA CHECK
-      // ======================================
-
+      // GPA
       if (
         scholarship.minimumGPA >
           0 &&
@@ -547,10 +629,7 @@ app.get(
         );
       }
 
-      // ======================================
-      // ACADEMIC YEAR CHECK
-      // ======================================
-
+      // Academic year
       if (
         scholarship.requiredAcademicYear &&
         profile.academicYear !==
@@ -564,10 +643,7 @@ app.get(
         );
       }
 
-      // ======================================
-      // COURSE CHECK
-      // ======================================
-
+      // Course
       if (
         scholarship.requiredCourse &&
         scholarship.requiredCourse.trim() !==
@@ -948,10 +1024,6 @@ app.post(
         statement,
       } = req.body;
 
-      // ======================================
-      // FIND SCHOLARSHIP
-      // ======================================
-
       const scholarship =
         await Scholarship.findById(
           scholarshipId
@@ -974,10 +1046,7 @@ app.post(
         });
       }
 
-      // ======================================
-      // PREVENT DUPLICATE APPLICATION
-      // ======================================
-
+      // Prevent duplicate application
       const existingApplication =
         await Application.findOne({
           student:
@@ -996,10 +1065,6 @@ app.post(
         });
       }
 
-      // ======================================
-      // FIND STUDENT ACCOUNT
-      // ======================================
-
       const user =
         await User.findById(
           req.user.id
@@ -1013,10 +1078,6 @@ app.post(
             "Student account not found.",
         });
       }
-
-      // ======================================
-      // FIND STUDENT PROFILE
-      // ======================================
 
       const profile =
         await StudentProfile.findOne({
@@ -1038,8 +1099,6 @@ app.post(
       const eligibilityReasons =
         [];
 
-      // GPA
-
       if (
         scholarship.minimumGPA >
           0 &&
@@ -1057,8 +1116,6 @@ app.post(
         );
       }
 
-      // Academic year
-
       if (
         scholarship.requiredAcademicYear &&
         profile.academicYear !==
@@ -1071,8 +1128,6 @@ app.post(
           }.`
         );
       }
-
-      // Course
 
       if (
         scholarship.requiredCourse &&
@@ -1116,10 +1171,7 @@ app.post(
         });
       }
 
-      // ======================================
-      // VALIDATE STATEMENT
-      // ======================================
-
+      // Validate statement
       if (
         !statement ||
         statement.trim() === ""
@@ -1130,10 +1182,7 @@ app.post(
         });
       }
 
-      // ======================================
-      // PREPARE UPLOADED DOCUMENTS
-      // ======================================
-
+      // Store uploaded document metadata
       const uploadedDocuments = (
         req.files || []
       ).map(
@@ -1154,10 +1203,6 @@ app.post(
             file.size,
         })
       );
-
-      // ======================================
-      // CREATE APPLICATION
-      // ======================================
 
       const application =
         new Application({
@@ -1260,10 +1305,7 @@ app.get(
         });
       }
 
-      // ======================================
-      // STUDENT ACCESS
-      // ======================================
-
+      // Student can only view own document
       if (
         req.user.role ===
         "student"
@@ -1279,10 +1321,8 @@ app.get(
         }
       }
 
-      // ======================================
-      // PROVIDER ACCESS
-      // ======================================
-
+      // Provider can only view documents
+      // belonging to their scholarships.
       if (
         req.user.role ===
         "provider"
@@ -1302,12 +1342,6 @@ app.get(
           });
         }
       }
-
-      // Admin can access all documents.
-
-      // ======================================
-      // SECURE FILE PATH
-      // ======================================
 
       const uploadsDirectory =
         path.resolve(
@@ -1337,10 +1371,6 @@ app.get(
             "Invalid document path.",
         });
       }
-
-      // ======================================
-      // RESPONSE HEADERS
-      // ======================================
 
       res.setHeader(
         "Content-Type",
@@ -1506,8 +1536,7 @@ app.get(
 );
 
 // ==========================================
-// PROVIDER / ADMIN
-// UPDATE APPLICATION STATUS
+// PROVIDER / ADMIN - UPDATE APPLICATION STATUS
 // ==========================================
 
 app.patch(
@@ -1722,10 +1751,7 @@ app.use(
     res,
     next
   ) => {
-    // ======================================
-    // MULTER ERRORS
-    // ======================================
-
+    // Multer errors
     if (
       error instanceof
       multer.MulterError
@@ -1756,10 +1782,7 @@ app.use(
       });
     }
 
-    // ======================================
-    // INVALID FILE TYPE
-    // ======================================
-
+    // Invalid file type
     if (
       error.message ===
       "Only PDF, JPG, JPEG, PNG, DOC and DOCX files are allowed."
@@ -1769,10 +1792,6 @@ app.use(
           error.message,
       });
     }
-
-    // ======================================
-    // OTHER SERVER ERRORS
-    // ======================================
 
     console.error(error);
 
