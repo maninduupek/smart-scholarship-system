@@ -6,6 +6,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const path = require("path");
+const multer = require("multer");
 
 const User = require("./models/User");
 const Scholarship = require("./models/Scholarship");
@@ -32,9 +33,9 @@ const JWT_SECRET = process.env.JWT_SECRET;
 app.use(cors());
 app.use(express.json());
 
-// IMPORTANT:
-// We do NOT publicly expose the uploads folder.
-// Documents are accessed through a protected API route.
+// Uploaded documents are NOT publicly exposed.
+// They can only be accessed through the
+// protected document API route.
 
 // ==========================================
 // DATABASE CONNECTION
@@ -46,7 +47,10 @@ mongoose
     console.log("MongoDB connected successfully!");
   })
   .catch((error) => {
-    console.error("MongoDB connection failed:", error);
+    console.error(
+      "MongoDB connection failed:",
+      error
+    );
   });
 
 // ==========================================
@@ -54,116 +58,150 @@ mongoose
 // ==========================================
 
 app.get("/", (req, res) => {
-  res.send("Smart Scholarship System Backend is running!");
+  res.send(
+    "Smart Scholarship System Backend is running!"
+  );
 });
 
 // ==========================================
 // USER REGISTRATION
 // ==========================================
 
-app.post("/api/users/register", async (req, res) => {
-  try {
-    const { fullName, email, password } = req.body;
+app.post(
+  "/api/users/register",
+  async (req, res) => {
+    try {
+      const {
+        fullName,
+        email,
+        password,
+      } = req.body;
 
-    const existingUser = await User.findOne({
-      email,
-    });
+      const existingUser =
+        await User.findOne({
+          email,
+        });
 
-    if (existingUser) {
-      return res.status(400).json({
-        message: "User with this email already exists",
+      if (existingUser) {
+        return res.status(400).json({
+          message:
+            "User with this email already exists",
+        });
+      }
+
+      const hashedPassword =
+        await bcrypt.hash(
+          password,
+          10
+        );
+
+      const user = new User({
+        fullName,
+        email,
+        password: hashedPassword,
+
+        // Public registration can only
+        // create student accounts.
+        role: "student",
+      });
+
+      await user.save();
+
+      return res.status(201).json({
+        message:
+          "User registered successfully",
+
+        user: {
+          id: user._id,
+          fullName: user.fullName,
+          email: user.email,
+          role: user.role,
+        },
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message:
+          "Registration failed",
+
+        error: error.message,
       });
     }
-
-    const hashedPassword = await bcrypt.hash(
-      password,
-      10
-    );
-
-    const user = new User({
-      fullName,
-      email,
-      password: hashedPassword,
-      role: "student",
-    });
-
-    await user.save();
-
-    res.status(201).json({
-      message: "User registered successfully",
-      user: {
-        id: user._id,
-        fullName: user.fullName,
-        email: user.email,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Registration failed",
-      error: error.message,
-    });
   }
-});
+);
 
 // ==========================================
 // USER LOGIN
 // ==========================================
 
-app.post("/api/users/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
+app.post(
+  "/api/users/login",
+  async (req, res) => {
+    try {
+      const {
+        email,
+        password,
+      } = req.body;
 
-    const user = await User.findOne({
-      email,
-    });
+      const user =
+        await User.findOne({
+          email,
+        });
 
-    if (!user) {
-      return res.status(400).json({
-        message: "Invalid email or password",
-      });
-    }
-
-    const passwordMatch = await bcrypt.compare(
-      password,
-      user.password
-    );
-
-    if (!passwordMatch) {
-      return res.status(400).json({
-        message: "Invalid email or password",
-      });
-    }
-
-    const token = jwt.sign(
-      {
-        id: user._id,
-        email: user.email,
-        role: user.role,
-      },
-      JWT_SECRET,
-      {
-        expiresIn: "1h",
+      if (!user) {
+        return res.status(400).json({
+          message:
+            "Invalid email or password",
+        });
       }
-    );
 
-    res.status(200).json({
-      message: "Login successful",
-      token,
-      user: {
-        id: user._id,
-        fullName: user.fullName,
-        email: user.email,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Login failed",
-      error: error.message,
-    });
+      const passwordMatch =
+        await bcrypt.compare(
+          password,
+          user.password
+        );
+
+      if (!passwordMatch) {
+        return res.status(400).json({
+          message:
+            "Invalid email or password",
+        });
+      }
+
+      const token = jwt.sign(
+        {
+          id: user._id,
+          email: user.email,
+          role: user.role,
+        },
+        JWT_SECRET,
+        {
+          expiresIn: "1h",
+        }
+      );
+
+      return res.status(200).json({
+        message:
+          "Login successful",
+
+        token,
+
+        user: {
+          id: user._id,
+          fullName: user.fullName,
+          email: user.email,
+          role: user.role,
+        },
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message:
+          "Login failed",
+
+        error: error.message,
+      });
+    }
   }
-});
+);
 
 // ==========================================
 // STUDENT PROFILE - GET
@@ -173,29 +211,37 @@ app.get(
   "/api/student/profile",
   authMiddleware,
   roleMiddleware(["student"]),
+
   async (req, res) => {
     try {
-      const user = await User.findById(
-        req.user.id
-      ).select("fullName email");
+      const user =
+        await User.findById(
+          req.user.id
+        ).select(
+          "fullName email"
+        );
 
       if (!user) {
         return res.status(404).json({
-          message: "User not found.",
+          message:
+            "User not found.",
         });
       }
 
-      const profile = await StudentProfile.findOne({
-        student: req.user.id,
-      });
+      const profile =
+        await StudentProfile.findOne({
+          student: req.user.id,
+        });
 
-      res.status(200).json({
+      return res.status(200).json({
         user,
         profile,
       });
     } catch (error) {
-      res.status(500).json({
-        message: "Failed to load student profile.",
+      return res.status(500).json({
+        message:
+          "Failed to load student profile.",
+
         error: error.message,
       });
     }
@@ -210,6 +256,7 @@ app.put(
   "/api/student/profile",
   authMiddleware,
   roleMiddleware(["student"]),
+
   async (req, res) => {
     try {
       const {
@@ -224,6 +271,7 @@ app.put(
           {
             student: req.user.id,
           },
+
           {
             student: req.user.id,
             university,
@@ -231,6 +279,7 @@ app.put(
             academicYear,
             gpa,
           },
+
           {
             new: true,
             upsert: true,
@@ -238,13 +287,17 @@ app.put(
           }
         );
 
-      res.status(200).json({
-        message: "Student profile saved successfully!",
+      return res.status(200).json({
+        message:
+          "Student profile saved successfully!",
+
         profile,
       });
     } catch (error) {
-      res.status(500).json({
-        message: "Failed to save student profile.",
+      return res.status(500).json({
+        message:
+          "Failed to save student profile.",
+
         error: error.message,
       });
     }
@@ -258,7 +311,11 @@ app.put(
 app.post(
   "/api/scholarships",
   authMiddleware,
-  roleMiddleware(["provider", "admin"]),
+  roleMiddleware([
+    "provider",
+    "admin",
+  ]),
+
   async (req, res) => {
     try {
       const {
@@ -274,42 +331,64 @@ app.post(
         requirements,
       } = req.body;
 
-      const scholarship = new Scholarship({
-        title,
-        provider,
-        providerUser: req.user.id,
-        description,
-        amount: Number(amount),
-        deadline,
-        eligibility,
+      const scholarship =
+        new Scholarship({
+          title,
+          provider,
 
-        minimumGPA:
-          minimumGPA === "" ||
-          minimumGPA === undefined
-            ? 0
-            : Number(minimumGPA),
+          providerUser:
+            req.user.id,
 
-        requiredAcademicYear:
-          requiredAcademicYear === "" ||
-          requiredAcademicYear === undefined ||
-          requiredAcademicYear === null
-            ? null
-            : Number(requiredAcademicYear),
+          description,
 
-        requiredCourse: requiredCourse || "",
-        requirements: requirements || [],
-        status: "active",
-      });
+          amount:
+            Number(amount),
+
+          deadline,
+
+          eligibility,
+
+          minimumGPA:
+            minimumGPA === "" ||
+            minimumGPA === undefined
+              ? 0
+              : Number(
+                  minimumGPA
+                ),
+
+          requiredAcademicYear:
+            requiredAcademicYear === "" ||
+            requiredAcademicYear ===
+              undefined ||
+            requiredAcademicYear ===
+              null
+              ? null
+              : Number(
+                  requiredAcademicYear
+                ),
+
+          requiredCourse:
+            requiredCourse || "",
+
+          requirements:
+            requirements || [],
+
+          status: "active",
+        });
 
       await scholarship.save();
 
-      res.status(201).json({
-        message: "Scholarship created successfully!",
+      return res.status(201).json({
+        message:
+          "Scholarship created successfully!",
+
         scholarship,
       });
     } catch (error) {
-      res.status(500).json({
-        message: "Failed to create scholarship.",
+      return res.status(500).json({
+        message:
+          "Failed to create scholarship.",
+
         error: error.message,
       });
     }
@@ -323,21 +402,29 @@ app.post(
 app.get(
   "/api/scholarships",
   authMiddleware,
-  roleMiddleware(["student", "provider", "admin"]),
+  roleMiddleware([
+    "student",
+    "provider",
+    "admin",
+  ]),
+
   async (req, res) => {
     try {
-      const scholarships = await Scholarship.find({
-        status: "active",
-      }).sort({
-        createdAt: -1,
-      });
+      const scholarships =
+        await Scholarship.find({
+          status: "active",
+        }).sort({
+          createdAt: -1,
+        });
 
-      res.status(200).json({
+      return res.status(200).json({
         scholarships,
       });
     } catch (error) {
-      res.status(500).json({
-        message: "Failed to fetch scholarships.",
+      return res.status(500).json({
+        message:
+          "Failed to fetch scholarships.",
+
         error: error.message,
       });
     }
@@ -351,30 +438,41 @@ app.get(
 app.get(
   "/api/scholarships/provider/my",
   authMiddleware,
-  roleMiddleware(["provider", "admin"]),
+  roleMiddleware([
+    "provider",
+    "admin",
+  ]),
+
   async (req, res) => {
     try {
       let scholarships;
 
-      if (req.user.role === "admin") {
-        scholarships = await Scholarship.find().sort({
-          createdAt: -1,
-        });
+      if (
+        req.user.role ===
+        "admin"
+      ) {
+        scholarships =
+          await Scholarship.find().sort({
+            createdAt: -1,
+          });
       } else {
-        scholarships = await Scholarship.find({
-          providerUser: req.user.id,
-        }).sort({
-          createdAt: -1,
-        });
+        scholarships =
+          await Scholarship.find({
+            providerUser:
+              req.user.id,
+          }).sort({
+            createdAt: -1,
+          });
       }
 
-      res.status(200).json({
+      return res.status(200).json({
         scholarships,
       });
     } catch (error) {
-      res.status(500).json({
+      return res.status(500).json({
         message:
           "Failed to fetch provider scholarships.",
+
         error: error.message,
       });
     }
@@ -389,21 +487,35 @@ app.get(
   "/api/scholarships/:id/eligibility",
   authMiddleware,
   roleMiddleware(["student"]),
+
   async (req, res) => {
     try {
-      const scholarship = await Scholarship.findById(
-        req.params.id
-      );
+      const scholarship =
+        await Scholarship.findById(
+          req.params.id
+        );
 
       if (!scholarship) {
         return res.status(404).json({
-          message: "Scholarship not found.",
+          message:
+            "Scholarship not found.",
         });
       }
 
-      const profile = await StudentProfile.findOne({
-        student: req.user.id,
-      });
+      if (
+        scholarship.status !==
+        "active"
+      ) {
+        return res.status(400).json({
+          message:
+            "This scholarship is currently closed.",
+        });
+      }
+
+      const profile =
+        await StudentProfile.findOne({
+          student: req.user.id,
+        });
 
       if (!profile) {
         return res.status(400).json({
@@ -414,21 +526,31 @@ app.get(
 
       const reasons = [];
 
+      // ======================================
       // GPA CHECK
+      // ======================================
+
       if (
-        scholarship.minimumGPA > 0 &&
-        (profile.gpa === undefined ||
+        scholarship.minimumGPA >
+          0 &&
+        (profile.gpa ===
+          undefined ||
           profile.gpa === null ||
-          profile.gpa < scholarship.minimumGPA)
+          profile.gpa <
+            scholarship.minimumGPA)
       ) {
         reasons.push(
           `Minimum GPA required is ${scholarship.minimumGPA}. Your GPA is ${
-            profile.gpa ?? "not provided"
+            profile.gpa ??
+            "not provided"
           }.`
         );
       }
 
+      // ======================================
       // ACADEMIC YEAR CHECK
+      // ======================================
+
       if (
         scholarship.requiredAcademicYear &&
         profile.academicYear !==
@@ -436,15 +558,20 @@ app.get(
       ) {
         reasons.push(
           `Required academic year is Year ${scholarship.requiredAcademicYear}. Your academic year is Year ${
-            profile.academicYear ?? "not provided"
+            profile.academicYear ??
+            "not provided"
           }.`
         );
       }
 
+      // ======================================
       // COURSE CHECK
+      // ======================================
+
       if (
         scholarship.requiredCourse &&
-        scholarship.requiredCourse.trim() !== ""
+        scholarship.requiredCourse.trim() !==
+          ""
       ) {
         const studentCourse = (
           profile.course || ""
@@ -457,18 +584,23 @@ app.get(
             .trim()
             .toLowerCase();
 
-        if (studentCourse !== requiredCourse) {
+        if (
+          studentCourse !==
+          requiredCourse
+        ) {
           reasons.push(
             `Required course is ${scholarship.requiredCourse}. Your course is ${
-              profile.course || "not provided"
+              profile.course ||
+              "not provided"
             }.`
           );
         }
       }
 
-      const eligible = reasons.length === 0;
+      const eligible =
+        reasons.length === 0;
 
-      res.status(200).json({
+      return res.status(200).json({
         eligible,
 
         message: eligible
@@ -478,24 +610,37 @@ app.get(
         reasons,
 
         studentProfile: {
-          university: profile.university,
-          course: profile.course,
-          academicYear: profile.academicYear,
-          gpa: profile.gpa,
+          university:
+            profile.university,
+
+          course:
+            profile.course,
+
+          academicYear:
+            profile.academicYear,
+
+          gpa:
+            profile.gpa,
         },
 
         scholarshipCriteria: {
-          minimumGPA: scholarship.minimumGPA || 0,
+          minimumGPA:
+            scholarship.minimumGPA ||
+            0,
+
           requiredAcademicYear:
             scholarship.requiredAcademicYear,
+
           requiredCourse:
-            scholarship.requiredCourse || "",
+            scholarship.requiredCourse ||
+            "",
         },
       });
     } catch (error) {
-      res.status(500).json({
+      return res.status(500).json({
         message:
           "Failed to check scholarship eligibility.",
+
         error: error.message,
       });
     }
@@ -509,25 +654,34 @@ app.get(
 app.get(
   "/api/scholarships/:id",
   authMiddleware,
-  roleMiddleware(["student", "provider", "admin"]),
+  roleMiddleware([
+    "student",
+    "provider",
+    "admin",
+  ]),
+
   async (req, res) => {
     try {
-      const scholarship = await Scholarship.findById(
-        req.params.id
-      );
+      const scholarship =
+        await Scholarship.findById(
+          req.params.id
+        );
 
       if (!scholarship) {
         return res.status(404).json({
-          message: "Scholarship not found.",
+          message:
+            "Scholarship not found.",
         });
       }
 
-      res.status(200).json({
+      return res.status(200).json({
         scholarship,
       });
     } catch (error) {
-      res.status(500).json({
-        message: "Failed to fetch scholarship.",
+      return res.status(500).json({
+        message:
+          "Failed to fetch scholarship.",
+
         error: error.message,
       });
     }
@@ -535,27 +689,34 @@ app.get(
 );
 
 // ==========================================
-// UPDATE SCHOLARSHIP - SAFE VERSION
+// UPDATE SCHOLARSHIP
 // ==========================================
 
 app.put(
   "/api/scholarships/:id",
   authMiddleware,
-  roleMiddleware(["provider", "admin"]),
+  roleMiddleware([
+    "provider",
+    "admin",
+  ]),
+
   async (req, res) => {
     try {
-      const scholarship = await Scholarship.findById(
-        req.params.id
-      );
+      const scholarship =
+        await Scholarship.findById(
+          req.params.id
+        );
 
       if (!scholarship) {
         return res.status(404).json({
-          message: "Scholarship not found.",
+          message:
+            "Scholarship not found.",
         });
       }
 
       if (
-        req.user.role === "provider" &&
+        req.user.role ===
+          "provider" &&
         (!scholarship.providerUser ||
           scholarship.providerUser.toString() !==
             req.user.id)
@@ -579,63 +740,106 @@ app.put(
         requirements,
       } = req.body;
 
-      if (title !== undefined) {
-        scholarship.title = title;
+      if (
+        title !== undefined
+      ) {
+        scholarship.title =
+          title;
       }
 
-      if (provider !== undefined) {
-        scholarship.provider = provider;
+      if (
+        provider !== undefined
+      ) {
+        scholarship.provider =
+          provider;
       }
 
-      if (description !== undefined) {
-        scholarship.description = description;
+      if (
+        description !==
+        undefined
+      ) {
+        scholarship.description =
+          description;
       }
 
-      if (amount !== undefined) {
-        scholarship.amount = Number(amount);
+      if (
+        amount !== undefined
+      ) {
+        scholarship.amount =
+          Number(amount);
       }
 
-      if (deadline !== undefined) {
-        scholarship.deadline = deadline;
+      if (
+        deadline !== undefined
+      ) {
+        scholarship.deadline =
+          deadline;
       }
 
-      if (eligibility !== undefined) {
-        scholarship.eligibility = eligibility;
+      if (
+        eligibility !==
+        undefined
+      ) {
+        scholarship.eligibility =
+          eligibility;
       }
 
-      if (minimumGPA !== undefined) {
+      if (
+        minimumGPA !==
+        undefined
+      ) {
         scholarship.minimumGPA =
           minimumGPA === ""
             ? 0
-            : Number(minimumGPA);
+            : Number(
+                minimumGPA
+              );
       }
 
-      if (requiredAcademicYear !== undefined) {
+      if (
+        requiredAcademicYear !==
+        undefined
+      ) {
         scholarship.requiredAcademicYear =
-          requiredAcademicYear === "" ||
-          requiredAcademicYear === null
+          requiredAcademicYear ===
+            "" ||
+          requiredAcademicYear ===
+            null
             ? null
-            : Number(requiredAcademicYear);
+            : Number(
+                requiredAcademicYear
+              );
       }
 
-      if (requiredCourse !== undefined) {
+      if (
+        requiredCourse !==
+        undefined
+      ) {
         scholarship.requiredCourse =
           requiredCourse.trim();
       }
 
-      if (requirements !== undefined) {
-        scholarship.requirements = requirements;
+      if (
+        requirements !==
+        undefined
+      ) {
+        scholarship.requirements =
+          requirements;
       }
 
       await scholarship.save();
 
-      res.status(200).json({
-        message: "Scholarship updated successfully!",
+      return res.status(200).json({
+        message:
+          "Scholarship updated successfully!",
+
         scholarship,
       });
     } catch (error) {
-      res.status(500).json({
-        message: "Failed to update scholarship.",
+      return res.status(500).json({
+        message:
+          "Failed to update scholarship.",
+
         error: error.message,
       });
     }
@@ -649,29 +853,44 @@ app.put(
 app.patch(
   "/api/scholarships/:id/status",
   authMiddleware,
-  roleMiddleware(["provider", "admin"]),
+  roleMiddleware([
+    "provider",
+    "admin",
+  ]),
+
   async (req, res) => {
     try {
-      const { status } = req.body;
+      const {
+        status,
+      } = req.body;
 
-      if (!["active", "closed"].includes(status)) {
+      if (
+        ![
+          "active",
+          "closed",
+        ].includes(status)
+      ) {
         return res.status(400).json({
-          message: "Status must be active or closed.",
+          message:
+            "Status must be active or closed.",
         });
       }
 
-      const scholarship = await Scholarship.findById(
-        req.params.id
-      );
+      const scholarship =
+        await Scholarship.findById(
+          req.params.id
+        );
 
       if (!scholarship) {
         return res.status(404).json({
-          message: "Scholarship not found.",
+          message:
+            "Scholarship not found.",
         });
       }
 
       if (
-        req.user.role === "provider" &&
+        req.user.role ===
+          "provider" &&
         (!scholarship.providerUser ||
           scholarship.providerUser.toString() !==
             req.user.id)
@@ -682,19 +901,22 @@ app.patch(
         });
       }
 
-      scholarship.status = status;
+      scholarship.status =
+        status;
 
       await scholarship.save();
 
-      res.status(200).json({
+      return res.status(200).json({
         message:
           "Scholarship status updated successfully!",
+
         scholarship,
       });
     } catch (error) {
-      res.status(500).json({
+      return res.status(500).json({
         message:
           "Failed to update scholarship status.",
+
         error: error.message,
       });
     }
@@ -703,14 +925,21 @@ app.patch(
 
 // ==========================================
 // STUDENT - SUBMIT APPLICATION
-// ELIGIBILITY + DOCUMENT UPLOAD
 // ==========================================
 
 app.post(
   "/api/applications",
+
   authMiddleware,
-  roleMiddleware(["student"]),
-  upload.array("documents", 5),
+
+  roleMiddleware([
+    "student",
+  ]),
+
+  upload.array(
+    "documents",
+    5
+  ),
 
   async (req, res) => {
     try {
@@ -719,59 +948,81 @@ app.post(
         statement,
       } = req.body;
 
+      // ======================================
       // FIND SCHOLARSHIP
+      // ======================================
 
-      const scholarship = await Scholarship.findById(
-        scholarshipId
-      );
+      const scholarship =
+        await Scholarship.findById(
+          scholarshipId
+        );
 
       if (!scholarship) {
         return res.status(404).json({
-          message: "Scholarship not found.",
+          message:
+            "Scholarship not found.",
         });
       }
 
-      // CHECK SCHOLARSHIP STATUS
-
-      if (scholarship.status !== "active") {
+      if (
+        scholarship.status !==
+        "active"
+      ) {
         return res.status(400).json({
           message:
             "This scholarship is currently closed.",
         });
       }
 
-      // CHECK DUPLICATE APPLICATION
+      // ======================================
+      // PREVENT DUPLICATE APPLICATION
+      // ======================================
 
       const existingApplication =
         await Application.findOne({
-          student: req.user.id,
-          scholarship: scholarshipId,
+          student:
+            req.user.id,
+
+          scholarship:
+            scholarshipId,
         });
 
-      if (existingApplication) {
+      if (
+        existingApplication
+      ) {
         return res.status(400).json({
           message:
             "You have already applied for this scholarship.",
         });
       }
 
-      // GET STUDENT ACCOUNT
+      // ======================================
+      // FIND STUDENT ACCOUNT
+      // ======================================
 
-      const user = await User.findById(
-        req.user.id
-      ).select("fullName email");
+      const user =
+        await User.findById(
+          req.user.id
+        ).select(
+          "fullName email"
+        );
 
       if (!user) {
         return res.status(404).json({
-          message: "Student account not found.",
+          message:
+            "Student account not found.",
         });
       }
 
-      // GET STUDENT PROFILE
+      // ======================================
+      // FIND STUDENT PROFILE
+      // ======================================
 
-      const profile = await StudentProfile.findOne({
-        student: req.user.id,
-      });
+      const profile =
+        await StudentProfile.findOne({
+          student:
+            req.user.id,
+        });
 
       if (!profile) {
         return res.status(400).json({
@@ -784,23 +1035,30 @@ app.post(
       // CHECK ELIGIBILITY
       // ======================================
 
-      const eligibilityReasons = [];
+      const eligibilityReasons =
+        [];
 
       // GPA
+
       if (
-        scholarship.minimumGPA > 0 &&
-        (profile.gpa === undefined ||
+        scholarship.minimumGPA >
+          0 &&
+        (profile.gpa ===
+          undefined ||
           profile.gpa === null ||
-          profile.gpa < scholarship.minimumGPA)
+          profile.gpa <
+            scholarship.minimumGPA)
       ) {
         eligibilityReasons.push(
           `Minimum GPA required is ${scholarship.minimumGPA}. Your GPA is ${
-            profile.gpa ?? "not provided"
+            profile.gpa ??
+            "not provided"
           }.`
         );
       }
 
-      // ACADEMIC YEAR
+      // Academic year
+
       if (
         scholarship.requiredAcademicYear &&
         profile.academicYear !==
@@ -808,15 +1066,18 @@ app.post(
       ) {
         eligibilityReasons.push(
           `Required academic year is Year ${scholarship.requiredAcademicYear}. Your academic year is Year ${
-            profile.academicYear ?? "not provided"
+            profile.academicYear ??
+            "not provided"
           }.`
         );
       }
 
-      // COURSE
+      // Course
+
       if (
         scholarship.requiredCourse &&
-        scholarship.requiredCourse.trim() !== ""
+        scholarship.requiredCourse.trim() !==
+          ""
       ) {
         const studentCourse = (
           profile.course || ""
@@ -829,20 +1090,29 @@ app.post(
             .trim()
             .toLowerCase();
 
-        if (studentCourse !== requiredCourse) {
+        if (
+          studentCourse !==
+          requiredCourse
+        ) {
           eligibilityReasons.push(
             `Required course is ${scholarship.requiredCourse}. Your course is ${
-              profile.course || "not provided"
+              profile.course ||
+              "not provided"
             }.`
           );
         }
       }
 
-      if (eligibilityReasons.length > 0) {
+      if (
+        eligibilityReasons.length >
+        0
+      ) {
         return res.status(403).json({
           message:
             "You are not eligible to apply for this scholarship.",
-          reasons: eligibilityReasons,
+
+          reasons:
+            eligibilityReasons,
         });
       }
 
@@ -850,7 +1120,10 @@ app.post(
       // VALIDATE STATEMENT
       // ======================================
 
-      if (!statement || statement.trim() === "") {
+      if (
+        !statement ||
+        statement.trim() === ""
+      ) {
         return res.status(400).json({
           message:
             "Statement of purpose is required.",
@@ -863,41 +1136,77 @@ app.post(
 
       const uploadedDocuments = (
         req.files || []
-      ).map((file) => ({
-        originalName: file.originalname,
-        fileName: file.filename,
-        filePath: file.path,
-        fileType: file.mimetype,
-        fileSize: file.size,
-      }));
+      ).map(
+        (file) => ({
+          originalName:
+            file.originalname,
+
+          fileName:
+            file.filename,
+
+          filePath:
+            file.path,
+
+          fileType:
+            file.mimetype,
+
+          fileSize:
+            file.size,
+        })
+      );
 
       // ======================================
       // CREATE APPLICATION
       // ======================================
 
-      const application = new Application({
-        student: req.user.id,
-        scholarship: scholarshipId,
-        fullName: user.fullName,
-        email: user.email,
-        university: profile.university,
-        course: profile.course,
-        academicYear: profile.academicYear,
-        statement: statement.trim(),
-        documents: uploadedDocuments,
-        status: "submitted",
-      });
+      const application =
+        new Application({
+          student:
+            req.user.id,
+
+          scholarship:
+            scholarshipId,
+
+          fullName:
+            user.fullName,
+
+          email:
+            user.email,
+
+          university:
+            profile.university,
+
+          course:
+            profile.course,
+
+          academicYear:
+            profile.academicYear,
+
+          statement:
+            statement.trim(),
+
+          documents:
+            uploadedDocuments,
+
+          status:
+            "submitted",
+        });
 
       await application.save();
 
-      res.status(201).json({
-        message: "Application submitted successfully!",
+      return res.status(201).json({
+        message:
+          "Application submitted successfully!",
+
         application,
       });
     } catch (error) {
-      res.status(500).json({
-        message: "Failed to submit application.",
-        error: error.message,
+      return res.status(500).json({
+        message:
+          "Failed to submit application.",
+
+        error:
+          error.message,
       });
     }
   }
@@ -909,8 +1218,15 @@ app.post(
 
 app.get(
   "/api/applications/:applicationId/documents/:documentId",
+
   authMiddleware,
-  roleMiddleware(["student", "provider", "admin"]),
+
+  roleMiddleware([
+    "student",
+    "provider",
+    "admin",
+  ]),
+
   async (req, res) => {
     try {
       const {
@@ -918,24 +1234,19 @@ app.get(
         documentId,
       } = req.params;
 
-      // ======================================
-      // FIND APPLICATION
-      // ======================================
-
       const application =
         await Application.findById(
           applicationId
-        ).populate("scholarship");
+        ).populate(
+          "scholarship"
+        );
 
       if (!application) {
         return res.status(404).json({
-          message: "Application not found.",
+          message:
+            "Application not found.",
         });
       }
-
-      // ======================================
-      // FIND DOCUMENT
-      // ======================================
 
       const document =
         application.documents.id(
@@ -944,16 +1255,19 @@ app.get(
 
       if (!document) {
         return res.status(404).json({
-          message: "Document not found.",
+          message:
+            "Document not found.",
         });
       }
 
       // ======================================
       // STUDENT ACCESS
-      // Student can only access own documents
       // ======================================
 
-      if (req.user.role === "student") {
+      if (
+        req.user.role ===
+        "student"
+      ) {
         if (
           application.student.toString() !==
           req.user.id
@@ -967,11 +1281,12 @@ app.get(
 
       // ======================================
       // PROVIDER ACCESS
-      // Provider can only access documents
-      // belonging to their scholarships
       // ======================================
 
-      if (req.user.role === "provider") {
+      if (
+        req.user.role ===
+        "provider"
+      ) {
         const scholarship =
           application.scholarship;
 
@@ -988,40 +1303,43 @@ app.get(
         }
       }
 
-      // Admin is allowed to access all documents.
+      // Admin can access all documents.
 
       // ======================================
-      // BUILD SAFE FILE PATH
+      // SECURE FILE PATH
       // ======================================
 
-      const uploadsDirectory = path.resolve(
-        __dirname,
-        "uploads"
-      );
+      const uploadsDirectory =
+        path.resolve(
+          __dirname,
+          "uploads"
+        );
 
-      // Never use a filename supplied directly
-      // through the URL.
-      const safeFileName = path.basename(
-        document.fileName
-      );
+      const safeFileName =
+        path.basename(
+          document.fileName
+        );
 
-      const filePath = path.resolve(
-        uploadsDirectory,
-        safeFileName
-      );
+      const filePath =
+        path.resolve(
+          uploadsDirectory,
+          safeFileName
+        );
 
-      // Extra protection against unsafe paths
       if (
-        path.dirname(filePath) !==
+        path.dirname(
+          filePath
+        ) !==
         uploadsDirectory
       ) {
         return res.status(400).json({
-          message: "Invalid document path.",
+          message:
+            "Invalid document path.",
         });
       }
 
       // ======================================
-      // SEND DOCUMENT
+      // RESPONSE HEADERS
       // ======================================
 
       res.setHeader(
@@ -1039,6 +1357,7 @@ app.get(
 
       return res.sendFile(
         filePath,
+
         (error) => {
           if (
             error &&
@@ -1053,8 +1372,11 @@ app.get(
       );
     } catch (error) {
       return res.status(500).json({
-        message: "Failed to open document.",
-        error: error.message,
+        message:
+          "Failed to open document.",
+
+        error:
+          error.message,
       });
     }
   }
@@ -1066,26 +1388,37 @@ app.get(
 
 app.get(
   "/api/applications/my",
+
   authMiddleware,
-  roleMiddleware(["student"]),
+
+  roleMiddleware([
+    "student",
+  ]),
+
   async (req, res) => {
     try {
-      const applications = await Application.find({
-        student: req.user.id,
-      })
-        .populate("scholarship")
-        .sort({
-          createdAt: -1,
-        });
+      const applications =
+        await Application.find({
+          student:
+            req.user.id,
+        })
+          .populate(
+            "scholarship"
+          )
+          .sort({
+            createdAt: -1,
+          });
 
-      res.status(200).json({
+      return res.status(200).json({
         applications,
       });
     } catch (error) {
-      res.status(500).json({
+      return res.status(500).json({
         message:
           "Failed to fetch your applications.",
-        error: error.message,
+
+        error:
+          error.message,
       });
     }
   }
@@ -1097,49 +1430,76 @@ app.get(
 
 app.get(
   "/api/applications/provider",
+
   authMiddleware,
-  roleMiddleware(["provider", "admin"]),
+
+  roleMiddleware([
+    "provider",
+    "admin",
+  ]),
+
   async (req, res) => {
     try {
       let applications;
 
-      if (req.user.role === "admin") {
-        applications = await Application.find()
-          .populate("student", "fullName email")
-          .populate("scholarship")
-          .sort({
-            createdAt: -1,
-          });
+      if (
+        req.user.role ===
+        "admin"
+      ) {
+        applications =
+          await Application.find()
+            .populate(
+              "student",
+              "fullName email"
+            )
+            .populate(
+              "scholarship"
+            )
+            .sort({
+              createdAt: -1,
+            });
       } else {
         const providerScholarships =
           await Scholarship.find({
-            providerUser: req.user.id,
+            providerUser:
+              req.user.id,
           }).select("_id");
 
         const scholarshipIds =
           providerScholarships.map(
-            (scholarship) => scholarship._id
+            (scholarship) =>
+              scholarship._id
           );
 
-        applications = await Application.find({
-          scholarship: {
-            $in: scholarshipIds,
-          },
-        })
-          .populate("student", "fullName email")
-          .populate("scholarship")
-          .sort({
-            createdAt: -1,
-          });
+        applications =
+          await Application.find({
+            scholarship: {
+              $in:
+                scholarshipIds,
+            },
+          })
+            .populate(
+              "student",
+              "fullName email"
+            )
+            .populate(
+              "scholarship"
+            )
+            .sort({
+              createdAt: -1,
+            });
       }
 
-      res.status(200).json({
+      return res.status(200).json({
         applications,
       });
     } catch (error) {
-      res.status(500).json({
-        message: "Failed to fetch applications.",
-        error: error.message,
+      return res.status(500).json({
+        message:
+          "Failed to fetch applications.",
+
+        error:
+          error.message,
       });
     }
   }
@@ -1152,11 +1512,19 @@ app.get(
 
 app.patch(
   "/api/applications/:id/status",
+
   authMiddleware,
-  roleMiddleware(["provider", "admin"]),
+
+  roleMiddleware([
+    "provider",
+    "admin",
+  ]),
+
   async (req, res) => {
     try {
-      const { status } = req.body;
+      const {
+        status,
+      } = req.body;
 
       const allowedStatuses = [
         "submitted",
@@ -1165,27 +1533,35 @@ app.patch(
         "rejected",
       ];
 
-      if (!allowedStatuses.includes(status)) {
+      if (
+        !allowedStatuses.includes(
+          status
+        )
+      ) {
         return res.status(400).json({
-          message: "Invalid application status.",
+          message:
+            "Invalid application status.",
         });
       }
 
       const application =
         await Application.findById(
           req.params.id
-        ).populate("scholarship");
+        ).populate(
+          "scholarship"
+        );
 
       if (!application) {
         return res.status(404).json({
-          message: "Application not found.",
+          message:
+            "Application not found.",
         });
       }
 
-      // Provider can only manage applications
-      // belonging to their own scholarships.
-
-      if (req.user.role === "provider") {
+      if (
+        req.user.role ===
+        "provider"
+      ) {
         const scholarship =
           application.scholarship;
 
@@ -1202,20 +1578,24 @@ app.patch(
         }
       }
 
-      application.status = status;
+      application.status =
+        status;
 
       await application.save();
 
-      res.status(200).json({
+      return res.status(200).json({
         message:
           "Application status updated successfully!",
+
         application,
       });
     } catch (error) {
-      res.status(500).json({
+      return res.status(500).json({
         message:
           "Failed to update application status.",
-        error: error.message,
+
+        error:
+          error.message,
       });
     }
   }
@@ -1227,8 +1607,13 @@ app.patch(
 
 app.get(
   "/api/admin/dashboard",
+
   authMiddleware,
-  roleMiddleware(["admin"]),
+
+  roleMiddleware([
+    "admin",
+  ]),
+
   async (req, res) => {
     try {
       const [
@@ -1239,31 +1624,32 @@ app.get(
         activeScholarships,
         closedScholarships,
         totalApplications,
-      ] = await Promise.all([
-        User.countDocuments(),
+      ] =
+        await Promise.all([
+          User.countDocuments(),
 
-        User.countDocuments({
-          role: "student",
-        }),
+          User.countDocuments({
+            role: "student",
+          }),
 
-        User.countDocuments({
-          role: "provider",
-        }),
+          User.countDocuments({
+            role: "provider",
+          }),
 
-        Scholarship.countDocuments(),
+          Scholarship.countDocuments(),
 
-        Scholarship.countDocuments({
-          status: "active",
-        }),
+          Scholarship.countDocuments({
+            status: "active",
+          }),
 
-        Scholarship.countDocuments({
-          status: "closed",
-        }),
+          Scholarship.countDocuments({
+            status: "closed",
+          }),
 
-        Application.countDocuments(),
-      ]);
+          Application.countDocuments(),
+        ]);
 
-      res.status(200).json({
+      return res.status(200).json({
         statistics: {
           totalUsers,
           totalStudents,
@@ -1275,10 +1661,12 @@ app.get(
         },
       });
     } catch (error) {
-      res.status(500).json({
+      return res.status(500).json({
         message:
           "Failed to load admin dashboard.",
-        error: error.message,
+
+        error:
+          error.message,
       });
     }
   }
@@ -1290,25 +1678,108 @@ app.get(
 
 app.get(
   "/api/admin/users",
+
   authMiddleware,
-  roleMiddleware(["admin"]),
+
+  roleMiddleware([
+    "admin",
+  ]),
+
   async (req, res) => {
     try {
-      const users = await User.find()
-        .select("-password")
-        .sort({
-          createdAt: -1,
-        });
+      const users =
+        await User.find()
+          .select(
+            "-password"
+          )
+          .sort({
+            createdAt: -1,
+          });
 
-      res.status(200).json({
+      return res.status(200).json({
         users,
       });
     } catch (error) {
-      res.status(500).json({
-        message: "Failed to fetch users.",
-        error: error.message,
+      return res.status(500).json({
+        message:
+          "Failed to fetch users.",
+
+        error:
+          error.message,
       });
     }
+  }
+);
+
+// ==========================================
+// FILE UPLOAD ERROR HANDLER
+// ==========================================
+
+app.use(
+  (
+    error,
+    req,
+    res,
+    next
+  ) => {
+    // ======================================
+    // MULTER ERRORS
+    // ======================================
+
+    if (
+      error instanceof
+      multer.MulterError
+    ) {
+      if (
+        error.code ===
+        "LIMIT_FILE_SIZE"
+      ) {
+        return res.status(400).json({
+          message:
+            "Each document must be 5 MB or smaller.",
+        });
+      }
+
+      if (
+        error.code ===
+        "LIMIT_FILE_COUNT"
+      ) {
+        return res.status(400).json({
+          message:
+            "You can upload a maximum of 5 documents.",
+        });
+      }
+
+      return res.status(400).json({
+        message:
+          `File upload error: ${error.message}`,
+      });
+    }
+
+    // ======================================
+    // INVALID FILE TYPE
+    // ======================================
+
+    if (
+      error.message ===
+      "Only PDF, JPG, JPEG, PNG, DOC and DOCX files are allowed."
+    ) {
+      return res.status(400).json({
+        message:
+          error.message,
+      });
+    }
+
+    // ======================================
+    // OTHER SERVER ERRORS
+    // ======================================
+
+    console.error(error);
+
+    return res.status(500).json({
+      message:
+        "An unexpected server error occurred.",
+    });
   }
 );
 
@@ -1316,8 +1787,11 @@ app.get(
 // START SERVER
 // ==========================================
 
-app.listen(PORT, () => {
-  console.log(
-    `Server running on http://localhost:${PORT}`
-  );
-});
+app.listen(
+  PORT,
+  () => {
+    console.log(
+      `Server running on http://localhost:${PORT}`
+    );
+  }
+);

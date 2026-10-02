@@ -166,11 +166,15 @@ function ApplicationForm() {
 
   const handleDocumentChange = (e) => {
     setError("");
+    setMessage("");
 
     const selectedFiles =
       Array.from(e.target.files);
 
-    // Maximum 5 documents
+    // ======================================
+    // MAXIMUM 5 DOCUMENTS
+    // ======================================
+
     if (selectedFiles.length > 5) {
       setError(
         "You can upload a maximum of 5 documents."
@@ -182,21 +186,50 @@ function ApplicationForm() {
       return;
     }
 
+    // ======================================
+    // ALLOWED FILE TYPES
+    // ======================================
+
     const allowedTypes = [
       "application/pdf",
       "image/jpeg",
       "image/png",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+
+    const allowedExtensions = [
+      ".pdf",
+      ".jpg",
+      ".jpeg",
+      ".png",
+      ".doc",
+      ".docx",
     ];
 
     for (const file of selectedFiles) {
-      // Check file type
+      const fileName =
+        file.name.toLowerCase();
+
+      const hasAllowedExtension =
+        allowedExtensions.some(
+          (extension) =>
+            fileName.endsWith(extension)
+        );
+
+      const hasAllowedType =
+        allowedTypes.includes(file.type);
+
+      // ======================================
+      // CHECK FILE TYPE
+      // ======================================
+
       if (
-        !allowedTypes.includes(
-          file.type
-        )
+        !hasAllowedType ||
+        !hasAllowedExtension
       ) {
         setError(
-          "Only PDF, JPG and PNG files are allowed."
+          `${file.name} is not allowed. Only PDF, JPG, JPEG, PNG, DOC and DOCX files are allowed.`
         );
 
         e.target.value = "";
@@ -205,7 +238,10 @@ function ApplicationForm() {
         return;
       }
 
-      // Check file size - 5 MB
+      // ======================================
+      // CHECK FILE SIZE - 5 MB
+      // ======================================
+
       if (
         file.size >
         5 * 1024 * 1024
@@ -276,6 +312,7 @@ function ApplicationForm() {
       );
 
       // Add every selected document
+
       documents.forEach((file) => {
         applicationData.append(
           "documents",
@@ -319,6 +356,7 @@ function ApplicationForm() {
 
       // Keep profile information,
       // but clear statement + documents
+
       setFormData(
         (previousData) => ({
           ...previousData,
@@ -604,7 +642,7 @@ function ApplicationForm() {
             <input
               id="applicationDocuments"
               type="file"
-              accept=".pdf,.jpg,.jpeg,.png"
+              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
               multiple
               onChange={
                 handleDocumentChange
@@ -613,7 +651,8 @@ function ApplicationForm() {
 
             <p>
               Maximum 5 files.
-              PDF, JPG or PNG only.
+              PDF, JPG, JPEG, PNG,
+              DOC or DOCX only.
               Maximum 5 MB per file.
             </p>
           </div>
