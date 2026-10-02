@@ -1,7 +1,5 @@
 const jwt = require("jsonwebtoken");
 
-const JWT_SECRET = "smart-scholarship-secret-key";
-
 const authMiddleware = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -9,6 +7,12 @@ const authMiddleware = (req, res, next) => {
     if (!authHeader) {
       return res.status(401).json({
         message: "Access denied. No token provided.",
+      });
+    }
+
+    if (!authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({
+        message: "Access denied. Invalid token format.",
       });
     }
 
@@ -20,7 +24,10 @@ const authMiddleware = (req, res, next) => {
       });
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET
+    );
 
     req.user = decoded;
 
