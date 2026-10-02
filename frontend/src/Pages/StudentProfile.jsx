@@ -11,6 +11,7 @@ function StudentProfile() {
   });
 
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -78,6 +79,9 @@ function StudentProfile() {
       ...formData,
       [e.target.name]: e.target.value,
     });
+
+    setMessage("");
+    setError("");
   };
 
   // ==========================================
@@ -96,6 +100,8 @@ function StudentProfile() {
       setError("Please login to save your profile.");
       return;
     }
+
+    setSaving(true);
 
     try {
       const response = await fetch(
@@ -133,6 +139,8 @@ function StudentProfile() {
       setError(
         "Unable to connect to the server. Please make sure the backend is running."
       );
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -142,9 +150,17 @@ function StudentProfile() {
 
   if (loading) {
     return (
-      <main>
-        <h1>My Profile</h1>
-        <p>Loading profile...</p>
+      <main className="student-page">
+        <div className="student-container">
+          <div className="student-loading-card">
+            <div className="student-spinner" />
+            <h2>Loading your profile</h2>
+            <p>
+              Please wait while we retrieve your
+              academic information.
+            </p>
+          </div>
+        </div>
       </main>
     );
   }
@@ -154,119 +170,278 @@ function StudentProfile() {
   // ==========================================
 
   return (
-    <main>
-      <section>
-        <h1>My Profile</h1>
+    <main className="student-page">
+      <div className="student-container">
 
-        <p>
-          Manage your academic information for
-          scholarship applications.
-        </p>
+        {/* HEADER */}
 
-        {message && <p>{message}</p>}
-
-        {error && <p>{error}</p>}
-
-        <form onSubmit={handleSubmit}>
+        <div className="student-page-header">
           <div>
-            <label>Full Name</label>
-            <br />
+            <span className="student-eyebrow">
+              Student Account
+            </span>
 
-            <input
-              type="text"
-              value={formData.fullName}
-              disabled
-            />
+            <h1>My Academic Profile</h1>
+
+            <p>
+              Keep your academic information up to
+              date so we can accurately check your
+              scholarship eligibility.
+            </p>
           </div>
 
-          <br />
-
-          <div>
-            <label>Email</label>
-            <br />
-
-            <input
-              type="email"
-              value={formData.email}
-              disabled
-            />
+          <div className="profile-header-icon">
+            🎓
           </div>
+        </div>
 
-          <br />
+        {/* MESSAGES */}
 
-          <div>
-            <label>University</label>
-            <br />
-
-            <input
-              type="text"
-              name="university"
-              value={formData.university}
-              onChange={handleChange}
-              placeholder="University of Ruhuna"
-              required
-            />
+        {message && (
+          <div className="alert alert-success">
+            <strong>✓ Profile Updated</strong>
+            <span>{message}</span>
           </div>
+        )}
 
-          <br />
-
-          <div>
-            <label>Degree / Course</label>
-            <br />
-
-            <input
-              type="text"
-              name="course"
-              value={formData.course}
-              onChange={handleChange}
-              placeholder="Computer Engineering"
-              required
-            />
+        {error && (
+          <div className="alert alert-error">
+            <strong>Unable to continue</strong>
+            <span>{error}</span>
           </div>
+        )}
 
-          <br />
+        <div className="profile-layout">
 
-          <div>
-            <label>Academic Year</label>
-            <br />
+          {/* LEFT INFORMATION */}
 
-            <input
-              type="number"
-              name="academicYear"
-              value={formData.academicYear}
-              onChange={handleChange}
-              min="1"
-              max="6"
-              required
-            />
-          </div>
+          <aside className="profile-summary-card">
+            <div className="profile-avatar">
+              {formData.fullName
+                ? formData.fullName
+                    .charAt(0)
+                    .toUpperCase()
+                : "S"}
+            </div>
 
-          <br />
+            <h2>
+              {formData.fullName || "Student"}
+            </h2>
 
-          <div>
-            <label>GPA</label>
-            <br />
+            <p className="profile-email">
+              {formData.email}
+            </p>
 
-            <input
-              type="number"
-              name="gpa"
-              value={formData.gpa}
-              onChange={handleChange}
-              min="0"
-              max="4"
-              step="0.01"
-              placeholder="3.50"
-              required
-            />
-          </div>
+            <div className="profile-summary-divider" />
 
-          <br />
+            <div className="profile-summary-item">
+              <span>University</span>
+              <strong>
+                {formData.university ||
+                  "Not added yet"}
+              </strong>
+            </div>
 
-          <button type="submit">
-            Save Profile
-          </button>
-        </form>
-      </section>
+            <div className="profile-summary-item">
+              <span>Course</span>
+              <strong>
+                {formData.course ||
+                  "Not added yet"}
+              </strong>
+            </div>
+
+            <div className="profile-summary-grid">
+              <div>
+                <span>Year</span>
+                <strong>
+                  {formData.academicYear
+                    ? `Year ${formData.academicYear}`
+                    : "—"}
+                </strong>
+              </div>
+
+              <div>
+                <span>GPA</span>
+                <strong>
+                  {formData.gpa !== ""
+                    ? Number(
+                        formData.gpa
+                      ).toFixed(2)
+                    : "—"}
+                </strong>
+              </div>
+            </div>
+
+            <div className="profile-tip">
+              <span>💡</span>
+
+              <p>
+                Scholarship eligibility is checked
+                using the academic information
+                saved here.
+              </p>
+            </div>
+          </aside>
+
+          {/* PROFILE FORM */}
+
+          <section className="profile-form-card">
+            <div className="profile-card-heading">
+              <div>
+                <h2>Profile Information</h2>
+                <p>
+                  Your name and email come from
+                  your registered account.
+                </p>
+              </div>
+
+              <span className="profile-status-badge">
+                Student
+              </span>
+            </div>
+
+            <form
+              onSubmit={handleSubmit}
+              className="profile-form"
+            >
+              <div className="profile-form-grid">
+
+                <div className="form-group">
+                  <label htmlFor="profileFullName">
+                    Full Name
+                  </label>
+
+                  <input
+                    id="profileFullName"
+                    type="text"
+                    value={formData.fullName}
+                    disabled
+                  />
+
+                  <small>
+                    Registered account information
+                  </small>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="profileEmail">
+                    Email Address
+                  </label>
+
+                  <input
+                    id="profileEmail"
+                    type="email"
+                    value={formData.email}
+                    disabled
+                  />
+
+                  <small>
+                    Registered account information
+                  </small>
+                </div>
+
+                <div className="form-group profile-full-field">
+                  <label htmlFor="university">
+                    University
+                  </label>
+
+                  <input
+                    id="university"
+                    type="text"
+                    name="university"
+                    value={formData.university}
+                    onChange={handleChange}
+                    placeholder="University of Ruhuna"
+                    required
+                  />
+                </div>
+
+                <div className="form-group profile-full-field">
+                  <label htmlFor="course">
+                    Degree / Course
+                  </label>
+
+                  <input
+                    id="course"
+                    type="text"
+                    name="course"
+                    value={formData.course}
+                    onChange={handleChange}
+                    placeholder="Computer Engineering"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="academicYear">
+                    Academic Year
+                  </label>
+
+                  <select
+                    id="academicYear"
+                    name="academicYear"
+                    value={formData.academicYear}
+                    onChange={handleChange}
+                    required
+                  >
+                    <option value="">
+                      Select year
+                    </option>
+                    <option value="1">Year 1</option>
+                    <option value="2">Year 2</option>
+                    <option value="3">Year 3</option>
+                    <option value="4">Year 4</option>
+                    <option value="5">Year 5</option>
+                    <option value="6">Year 6</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="gpa">
+                    Current GPA
+                  </label>
+
+                  <input
+                    id="gpa"
+                    type="number"
+                    name="gpa"
+                    value={formData.gpa}
+                    onChange={handleChange}
+                    min="0"
+                    max="4"
+                    step="0.01"
+                    placeholder="3.50"
+                    required
+                  />
+
+                  <small>
+                    Enter a value between 0.00
+                    and 4.00
+                  </small>
+                </div>
+              </div>
+
+              <div className="profile-form-footer">
+                <p>
+                  Make sure your information is
+                  accurate before checking
+                  scholarship eligibility.
+                </p>
+
+                <button
+                  type="submit"
+                  className="btn btn-primary profile-save-button"
+                  disabled={saving}
+                >
+                  {saving
+                    ? "Saving..."
+                    : "Save Profile"}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      </div>
     </main>
   );
 }

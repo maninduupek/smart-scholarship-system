@@ -1,31 +1,50 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import {
+  Link,
+  useParams,
+} from "react-router-dom";
 
 function ScholarshipDetails() {
   const { id } = useParams();
 
-  const [scholarship, setScholarship] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [
+    scholarship,
+    setScholarship,
+  ] = useState(null);
 
-  const [eligibilityResult, setEligibilityResult] =
-    useState(null);
+  const [loading, setLoading] =
+    useState(true);
 
-  const [checkingEligibility, setCheckingEligibility] =
-    useState(false);
+  const [error, setError] =
+    useState("");
 
-  const token = localStorage.getItem("token");
+  const [
+    eligibilityResult,
+    setEligibilityResult,
+  ] = useState(null);
+
+  const [
+    checkingEligibility,
+    setCheckingEligibility,
+  ] = useState(false);
+
+  const token =
+    localStorage.getItem("token");
 
   let user = null;
 
   try {
-    const storedUser = localStorage.getItem("user");
+    const storedUser =
+      localStorage.getItem("user");
 
     if (storedUser) {
-      user = JSON.parse(storedUser);
+      user =
+        JSON.parse(storedUser);
     }
   } catch (error) {
-    console.error("Failed to read user information.");
+    console.error(
+      "Failed to read user information."
+    );
   }
 
   // ==========================================
@@ -33,37 +52,44 @@ function ScholarshipDetails() {
   // ==========================================
 
   useEffect(() => {
-    const fetchScholarship = async () => {
-      try {
-        const response = await fetch(
-          `http://localhost:5000/api/scholarships/${id}`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+    const fetchScholarship =
+      async () => {
+        try {
+          const response =
+            await fetch(
+              `http://localhost:5000/api/scholarships/${id}`,
+              {
+                method: "GET",
+                headers: {
+                  Authorization:
+                    `Bearer ${token}`,
+                },
+              }
+            );
+
+          const data =
+            await response.json();
+
+          if (!response.ok) {
+            setError(
+              data.message ||
+                "Failed to load scholarship."
+            );
+
+            return;
           }
-        );
 
-        const data = await response.json();
-
-        if (!response.ok) {
-          setError(
-            data.message ||
-              "Failed to load scholarship."
+          setScholarship(
+            data.scholarship
           );
-          return;
+        } catch (error) {
+          setError(
+            "Unable to connect to the server."
+          );
+        } finally {
+          setLoading(false);
         }
-
-        setScholarship(data.scholarship);
-      } catch (error) {
-        setError(
-          "Unable to connect to the server."
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
+      };
 
     fetchScholarship();
   }, [id, token]);
@@ -72,47 +98,77 @@ function ScholarshipDetails() {
   // CHECK ELIGIBILITY
   // ==========================================
 
-  const handleCheckEligibility = async () => {
-    setCheckingEligibility(true);
-    setEligibilityResult(null);
-    setError("");
+  const handleCheckEligibility =
+    async () => {
+      setCheckingEligibility(true);
 
-    try {
-      const response = await fetch(
-        `http://localhost:5000/api/scholarships/${id}/eligibility`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+      setEligibilityResult(null);
+      setError("");
+
+      try {
+        const response =
+          await fetch(
+            `http://localhost:5000/api/scholarships/${id}/eligibility`,
+            {
+              method: "GET",
+              headers: {
+                Authorization:
+                  `Bearer ${token}`,
+              },
+            }
+          );
+
+        const data =
+          await response.json();
+
+        if (!response.ok) {
+          setEligibilityResult({
+            eligible: false,
+
+            message:
+              data.message ||
+              "Unable to check eligibility.",
+
+            reasons: [],
+          });
+
+          return;
         }
-      );
 
-      const data = await response.json();
-
-      if (!response.ok) {
+        setEligibilityResult(data);
+      } catch (error) {
         setEligibilityResult({
           eligible: false,
+
           message:
-            data.message ||
-            "Unable to check eligibility.",
+            "Unable to connect to the server.",
+
           reasons: [],
         });
-
-        return;
+      } finally {
+        setCheckingEligibility(
+          false
+        );
       }
+    };
 
-      setEligibilityResult(data);
-    } catch (error) {
-      setEligibilityResult({
-        eligible: false,
-        message:
-          "Unable to connect to the server.",
-        reasons: [],
-      });
-    } finally {
-      setCheckingEligibility(false);
+  // ==========================================
+  // HELPERS
+  // ==========================================
+
+  const formatAmount = (amount) => {
+    const numericAmount =
+      Number(amount);
+
+    if (
+      Number.isNaN(numericAmount)
+    ) {
+      return amount;
     }
+
+    return numericAmount.toLocaleString(
+      "en-LK"
+    );
   };
 
   // ==========================================
@@ -121,9 +177,21 @@ function ScholarshipDetails() {
 
   if (loading) {
     return (
-      <main>
-        <h1>Scholarship Details</h1>
-        <p>Loading scholarship...</p>
+      <main className="student-page">
+        <div className="student-container">
+          <div className="student-loading-card">
+            <div className="student-spinner" />
+
+            <h2>
+              Loading scholarship
+            </h2>
+
+            <p>
+              Retrieving scholarship
+              information...
+            </p>
+          </div>
+        </div>
       </main>
     );
   }
@@ -134,17 +202,48 @@ function ScholarshipDetails() {
 
   if (error && !scholarship) {
     return (
-      <main>
-        <h1>Scholarship Details</h1>
-        <p>{error}</p>
+      <main className="student-page">
+        <div className="student-container">
+          <div className="student-error-card">
+            <span>!</span>
+
+            <h2>
+              Scholarship unavailable
+            </h2>
+
+            <p>{error}</p>
+
+            <Link
+              to="/scholarships"
+              className="btn btn-secondary"
+            >
+              Back to Scholarships
+            </Link>
+          </div>
+        </div>
       </main>
     );
   }
 
   if (!scholarship) {
     return (
-      <main>
-        <h1>Scholarship Not Found</h1>
+      <main className="student-page">
+        <div className="student-container">
+          <div className="student-error-card">
+            <span>?</span>
+
+            <h2>
+              Scholarship Not Found
+            </h2>
+
+            <Link
+              to="/scholarships"
+              className="btn btn-secondary"
+            >
+              Back to Scholarships
+            </Link>
+          </div>
+        </div>
       </main>
     );
   }
@@ -154,122 +253,270 @@ function ScholarshipDetails() {
   // ==========================================
 
   return (
-    <main>
-      <section>
-        <h1>{scholarship.title}</h1>
+    <main className="student-page">
+      <div className="student-container">
 
-        <p>
-          <strong>Provider:</strong>{" "}
-          {scholarship.provider}
-        </p>
+        {/* BREADCRUMB */}
 
-        <p>
-          <strong>Description:</strong>{" "}
-          {scholarship.description}
-        </p>
+        <div className="scholarship-breadcrumb">
+          <Link to="/scholarships">
+            Scholarships
+          </Link>
 
-        <p>
-          <strong>Amount:</strong> Rs.{" "}
-          {scholarship.amount}
-        </p>
+          <span>›</span>
 
-        <p>
-          <strong>Deadline:</strong>{" "}
-          {new Date(
-            scholarship.deadline
-          ).toLocaleDateString()}
-        </p>
+          <span>Details</span>
+        </div>
 
-        <p>
-          <strong>Status:</strong>{" "}
-          {scholarship.status}
-        </p>
+        {/* HERO */}
 
-        <hr />
+        <section className="details-hero">
+          <div className="details-hero-main">
+            <div className="details-icon">
+              🎓
+            </div>
 
-        <h2>Eligibility</h2>
+            <div>
+              <div className="details-badges">
+                <span
+                  className={
+                    scholarship.status ===
+                    "active"
+                      ? "badge badge-success"
+                      : "badge badge-warning"
+                  }
+                >
+                  {scholarship.status}
+                </span>
 
-        <p>{scholarship.eligibility}</p>
+                {scholarship.requiredAcademicYear && (
+                  <span className="badge badge-info">
+                    Year{" "}
+                    {
+                      scholarship.requiredAcademicYear
+                    }
+                  </span>
+                )}
+              </div>
 
-        <h3>Eligibility Criteria</h3>
+              <h1>
+                {scholarship.title}
+              </h1>
 
-        <p>
-          <strong>Minimum GPA:</strong>{" "}
-          {scholarship.minimumGPA > 0
-            ? scholarship.minimumGPA
-            : "No minimum GPA"}
-        </p>
+              <p className="details-provider">
+                Offered by{" "}
+                <strong>
+                  {
+                    scholarship.provider
+                  }
+                </strong>
+              </p>
+            </div>
+          </div>
 
-        <p>
-          <strong>Required Academic Year:</strong>{" "}
-          {scholarship.requiredAcademicYear
-            ? `Year ${scholarship.requiredAcademicYear}`
-            : "Any academic year"}
-        </p>
+          <div className="details-amount">
+            <span>
+              Scholarship Amount
+            </span>
 
-        <p>
-          <strong>Required Course:</strong>{" "}
-          {scholarship.requiredCourse
-            ? scholarship.requiredCourse
-            : "Any course"}
-        </p>
+            <strong>
+              Rs.{" "}
+              {formatAmount(
+                scholarship.amount
+              )}
+            </strong>
+          </div>
+        </section>
 
-        <hr />
+        <div className="details-layout">
 
-        <h2>Required Documents</h2>
+          {/* ==================================
+              MAIN CONTENT
+              ================================== */}
 
-        {scholarship.requirements &&
-        scholarship.requirements.length > 0 ? (
-          <ul>
-            {scholarship.requirements.map(
-              (requirement, index) => (
-                <li key={index}>
-                  {requirement}
-                </li>
-              )
-            )}
-          </ul>
-        ) : (
-          <p>No specific documents listed.</p>
-        )}
+          <div className="details-main">
 
-        {/* =====================================
-            STUDENT ELIGIBILITY CHECK
-        ====================================== */}
+            {/* DESCRIPTION */}
 
-        {user?.role === "student" && (
-          <>
-            <hr />
+            <section className="details-card">
+              <div className="details-card-heading">
+                <div className="details-heading-icon">
+                  📄
+                </div>
 
-            <h2>Check Your Eligibility</h2>
+                <div>
+                  <h2>
+                    About This Scholarship
+                  </h2>
 
-            <p>
-              Check your saved student profile
-              against this scholarship's
-              requirements.
-            </p>
+                  <p>
+                    Scholarship overview
+                    and information
+                  </p>
+                </div>
+              </div>
 
-            <button
-              type="button"
-              onClick={handleCheckEligibility}
-              disabled={checkingEligibility}
-            >
-              {checkingEligibility
-                ? "Checking..."
-                : "Check Eligibility"}
-            </button>
+              <p className="details-description">
+                {
+                  scholarship.description
+                }
+              </p>
+            </section>
 
-            {/* ELIGIBILITY RESULT */}
+            {/* ELIGIBILITY */}
 
-            {eligibilityResult && (
-              <div>
-                <br />
+            <section className="details-card">
+              <div className="details-card-heading">
+                <div className="details-heading-icon">
+                  ✓
+                </div>
 
-                {eligibilityResult.eligible ? (
-                  <>
-                    <h3>
-                      ✅ You Are Eligible
-                    </h3>
+                <div>
+                  <h2>
+                    Eligibility Criteria
+                  </h2>
+
+                  <p>
+                    Requirements you need
+                    to meet
+                  </p>
+                </div>
+              </div>
+
+              {scholarship.eligibility && (
+                <div className="eligibility-description">
+                  {
+                    scholarship.eligibility
+                  }
+                </div>
+              )}
+
+              <div className="criteria-grid">
+
+                <div className="criteria-item">
+                  <span>
+                    Minimum GPA
+                  </span>
+
+                  <strong>
+                    {Number(
+                      scholarship.minimumGPA
+                    ) > 0
+                      ? Number(
+                          scholarship.minimumGPA
+                        ).toFixed(2)
+                      : "Any GPA"}
+                  </strong>
+                </div>
+
+                <div className="criteria-item">
+                  <span>
+                    Academic Year
+                  </span>
+
+                  <strong>
+                    {scholarship.requiredAcademicYear
+                      ? `Year ${scholarship.requiredAcademicYear}`
+                      : "Any Year"}
+                  </strong>
+                </div>
+
+                <div className="criteria-item">
+                  <span>
+                    Required Course
+                  </span>
+
+                  <strong>
+                    {scholarship.requiredCourse ||
+                      "Any Course"}
+                  </strong>
+                </div>
+              </div>
+            </section>
+
+            {/* DOCUMENTS */}
+
+            <section className="details-card">
+              <div className="details-card-heading">
+                <div className="details-heading-icon">
+                  📁
+                </div>
+
+                <div>
+                  <h2>
+                    Required Documents
+                  </h2>
+
+                  <p>
+                    Prepare these before
+                    applying
+                  </p>
+                </div>
+              </div>
+
+              {scholarship.requirements &&
+              scholarship.requirements
+                .length > 0 ? (
+                <div className="requirements-list">
+                  {scholarship.requirements.map(
+                    (
+                      requirement,
+                      index
+                    ) => (
+                      <div
+                        className="requirement-item"
+                        key={index}
+                      >
+                        <span>
+                          ✓
+                        </span>
+
+                        <p>
+                          {requirement}
+                        </p>
+                      </div>
+                    )
+                  )}
+                </div>
+              ) : (
+                <div className="no-requirements">
+                  <span>✓</span>
+
+                  <p>
+                    No specific documents
+                    have been listed for
+                    this scholarship.
+                  </p>
+                </div>
+              )}
+            </section>
+
+            {/* ==================================
+                ELIGIBILITY RESULT
+                ================================== */}
+
+            {user?.role ===
+              "student" &&
+              eligibilityResult && (
+                <section
+                  className={`eligibility-result-card ${
+                    eligibilityResult.eligible
+                      ? "eligibility-success"
+                      : "eligibility-failed"
+                  }`}
+                >
+                  <div className="eligibility-result-icon">
+                    {eligibilityResult.eligible
+                      ? "✓"
+                      : "!"}
+                  </div>
+
+                  <div className="eligibility-result-content">
+                    <h2>
+                      {eligibilityResult.eligible
+                        ? "You Are Eligible"
+                        : "Eligibility Requirements Not Met"}
+                    </h2>
 
                     <p>
                       {
@@ -277,31 +524,14 @@ function ScholarshipDetails() {
                       }
                     </p>
 
-                    <Link
-                      to={`/scholarships/${id}/apply`}
-                    >
-                      <button type="button">
-                        Apply Now
-                      </button>
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <h3>
-                      ❌ Not Eligible
-                    </h3>
-
-                    <p>
-                      {
-                        eligibilityResult.message
-                      }
-                    </p>
-
-                    {eligibilityResult.reasons &&
+                    {!eligibilityResult.eligible &&
+                      eligibilityResult.reasons &&
                       eligibilityResult.reasons
                         .length > 0 && (
-                        <>
-                          <h4>Reasons:</h4>
+                        <div className="eligibility-reasons">
+                          <strong>
+                            Reasons
+                          </strong>
 
                           <ul>
                             {eligibilityResult.reasons.map(
@@ -309,47 +539,154 @@ function ScholarshipDetails() {
                                 reason,
                                 index
                               ) => (
-                                <li key={index}>
-                                  {reason}
+                                <li
+                                  key={
+                                    index
+                                  }
+                                >
+                                  {
+                                    reason
+                                  }
                                 </li>
                               )
                             )}
                           </ul>
-                        </>
+                        </div>
                       )}
 
-                    <p>
-                      You can update your student
-                      profile if your information
-                      has changed.
-                    </p>
+                    <div className="eligibility-result-actions">
+                      {eligibilityResult.eligible ? (
+                        <Link
+                          to={`/scholarships/${id}/apply`}
+                          className="btn btn-success"
+                        >
+                          Apply Now
+                          <span>→</span>
+                        </Link>
+                      ) : (
+                        <Link
+                          to="/profile"
+                          className="btn btn-primary"
+                        >
+                          Update My Profile
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                </section>
+              )}
+          </div>
 
-                    <Link to="/profile">
-                      <button type="button">
-                        Update My Profile
-                      </button>
-                    </Link>
-                  </>
-                )}
+          {/* ==================================
+              SIDEBAR
+              ================================== */}
+
+          <aside className="details-sidebar">
+
+            <section className="details-summary-card">
+              <h3>
+                Scholarship Summary
+              </h3>
+
+              <div className="summary-row">
+                <span>Status</span>
+
+                <strong>
+                  {scholarship.status}
+                </strong>
               </div>
+
+              <div className="summary-row">
+                <span>Deadline</span>
+
+                <strong>
+                  {new Date(
+                    scholarship.deadline
+                  ).toLocaleDateString()}
+                </strong>
+              </div>
+
+              <div className="summary-row">
+                <span>Provider</span>
+
+                <strong>
+                  {
+                    scholarship.provider
+                  }
+                </strong>
+              </div>
+
+              <div className="summary-row">
+                <span>Amount</span>
+
+                <strong>
+                  Rs.{" "}
+                  {formatAmount(
+                    scholarship.amount
+                  )}
+                </strong>
+              </div>
+            </section>
+
+            {/* STUDENT ACTION */}
+
+            {user?.role ===
+              "student" && (
+              <section className="eligibility-check-card">
+                <div className="eligibility-check-icon">
+                  ✓
+                </div>
+
+                <h3>
+                  Are you eligible?
+                </h3>
+
+                <p>
+                  Compare your saved
+                  academic profile with
+                  this scholarship's
+                  requirements.
+                </p>
+
+                <button
+                  type="button"
+                  className="btn btn-primary eligibility-check-button"
+                  onClick={
+                    handleCheckEligibility
+                  }
+                  disabled={
+                    checkingEligibility
+                  }
+                >
+                  {checkingEligibility
+                    ? "Checking..."
+                    : "Check Eligibility"}
+                </button>
+
+                <Link
+                  to="/profile"
+                  className="eligibility-profile-link"
+                >
+                  View my academic profile
+                </Link>
+              </section>
             )}
-          </>
-        )}
 
-        {/* =====================================
-            PROVIDER / ADMIN
-        ====================================== */}
+            {/* PROVIDER / ADMIN */}
 
-        {user?.role !== "student" && (
-          <>
-            <br />
+            {user?.role !==
+              "student" && (
+              <Link
+                to="/scholarships"
+                className="btn btn-secondary details-back-button"
+              >
+                ← Back to Scholarships
+              </Link>
+            )}
 
-            <Link to="/scholarships">
-              Back to Scholarships
-            </Link>
-          </>
-        )}
-      </section>
+          </aside>
+        </div>
+      </div>
     </main>
   );
 }
