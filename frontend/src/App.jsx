@@ -18,6 +18,7 @@ import EditScholarship from "./pages/EditScholarship";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsers from "./pages/AdminUsers";
 import StudentProfile from "./pages/StudentProfile";
+import NotFound from "./pages/NotFound";
 
 import "./App.css";
 
@@ -27,20 +28,40 @@ function App() {
       <Navbar />
 
       <Routes>
-        {/* PUBLIC ROUTES */}
+        {/* ==========================================
+            PUBLIC ROUTES
+            ========================================== */}
 
         <Route path="/" element={<Home />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
 
-        {/* ALL LOGGED-IN USERS */}
+        <Route
+          path="/about"
+          element={<About />}
+        />
+
+        <Route
+          path="/login"
+          element={<Login />}
+        />
+
+        <Route
+          path="/register"
+          element={<Register />}
+        />
+
+        {/* ==========================================
+            ALL LOGGED-IN USERS
+            ========================================== */}
 
         <Route
           path="/scholarships"
           element={
             <ProtectedRoute
-              allowedRoles={["student", "provider", "admin"]}
+              allowedRoles={[
+                "student",
+                "provider",
+                "admin",
+              ]}
             >
               <Scholarships />
             </ProtectedRoute>
@@ -51,19 +72,27 @@ function App() {
           path="/scholarships/:id"
           element={
             <ProtectedRoute
-              allowedRoles={["student", "provider", "admin"]}
+              allowedRoles={[
+                "student",
+                "provider",
+                "admin",
+              ]}
             >
               <ScholarshipDetails />
             </ProtectedRoute>
           }
         />
 
-        {/* STUDENT ROUTES */}
+        {/* ==========================================
+            STUDENT ROUTES
+            ========================================== */}
 
         <Route
           path="/profile"
           element={
-            <ProtectedRoute allowedRoles={["student"]}>
+            <ProtectedRoute
+              allowedRoles={["student"]}
+            >
               <StudentProfile />
             </ProtectedRoute>
           }
@@ -72,7 +101,9 @@ function App() {
         <Route
           path="/scholarships/:id/apply"
           element={
-            <ProtectedRoute allowedRoles={["student"]}>
+            <ProtectedRoute
+              allowedRoles={["student"]}
+            >
               <ApplicationForm />
             </ProtectedRoute>
           }
@@ -81,18 +112,24 @@ function App() {
         <Route
           path="/my-applications"
           element={
-            <ProtectedRoute allowedRoles={["student"]}>
+            <ProtectedRoute
+              allowedRoles={["student"]}
+            >
               <MyApplications />
             </ProtectedRoute>
           }
         />
 
-        {/* ADMIN ROUTES */}
+        {/* ==========================================
+            ADMIN ROUTES
+            ========================================== */}
 
         <Route
           path="/admin"
           element={
-            <ProtectedRoute allowedRoles={["admin"]}>
+            <ProtectedRoute
+              allowedRoles={["admin"]}
+            >
               <AdminDashboard />
             </ProtectedRoute>
           }
@@ -101,19 +138,26 @@ function App() {
         <Route
           path="/admin/users"
           element={
-            <ProtectedRoute allowedRoles={["admin"]}>
+            <ProtectedRoute
+              allowedRoles={["admin"]}
+            >
               <AdminUsers />
             </ProtectedRoute>
           }
         />
 
-        {/* PROVIDER / ADMIN ROUTES */}
+        {/* ==========================================
+            PROVIDER / ADMIN ROUTES
+            ========================================== */}
 
         <Route
           path="/my-scholarships"
           element={
             <ProtectedRoute
-              allowedRoles={["provider", "admin"]}
+              allowedRoles={[
+                "provider",
+                "admin",
+              ]}
             >
               <MyScholarships />
             </ProtectedRoute>
@@ -124,7 +168,10 @@ function App() {
           path="/create-scholarship"
           element={
             <ProtectedRoute
-              allowedRoles={["provider", "admin"]}
+              allowedRoles={[
+                "provider",
+                "admin",
+              ]}
             >
               <CreateScholarship />
             </ProtectedRoute>
@@ -135,7 +182,10 @@ function App() {
           path="/edit-scholarship/:id"
           element={
             <ProtectedRoute
-              allowedRoles={["provider", "admin"]}
+              allowedRoles={[
+                "provider",
+                "admin",
+              ]}
             >
               <EditScholarship />
             </ProtectedRoute>
@@ -146,11 +196,24 @@ function App() {
           path="/provider-applications"
           element={
             <ProtectedRoute
-              allowedRoles={["provider", "admin"]}
+              allowedRoles={[
+                "provider",
+                "admin",
+              ]}
             >
               <ProviderApplications />
             </ProtectedRoute>
           }
+        />
+
+        {/* ==========================================
+            404 - UNKNOWN ROUTES
+            Keep this route LAST
+            ========================================== */}
+
+        <Route
+          path="*"
+          element={<NotFound />}
         />
       </Routes>
     </BrowserRouter>
