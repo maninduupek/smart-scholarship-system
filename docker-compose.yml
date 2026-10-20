@@ -1,0 +1,49 @@
+
+services:
+  mongodb:
+    image: mongo:8
+    ports:
+      - "27018:27017"
+    volumes:
+      - scholarship-mongodb-data:/data/db
+    networks:
+      - scholarship-network
+    restart: unless-stopped
+
+  backend:
+    image: scholarship-backend
+    build:
+      context: ./backend
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./backend/.env
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/smartScholarshipDB
+    volumes:
+      - ${USERPROFILE}/smart-scholarship-uploads:/app/uploads
+    depends_on:
+      - mongodb
+    networks:
+      - scholarship-network
+    restart: unless-stopped
+
+  frontend:
+    image: scholarship-frontend
+    build:
+      context: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - scholarship-network
+    restart: unless-stopped
+
+volumes:
+  scholarship-mongodb-data:
+    external: true
+
+networks:
+  scholarship-network:
+    external: true
