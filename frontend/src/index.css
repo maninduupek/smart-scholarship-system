@@ -415,3 +415,112 @@ tr:last-child td {
     padding: 18px;
   }
 }
+
+/* ==========================================
+   UI POLISH
+   ========================================== */
+
+:root {
+  --primary: #1f5bd8;
+  --primary-dark: #194bb5;
+  --primary-light: #edf4ff;
+  --background: #f6f8fc;
+  --border: #e4e9f2;
+  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.045);
+  --shadow-md: 0 12px 28px rgba(15, 23, 42, 0.085);
+  --radius-md: 11px;
+  --radius-lg: 18px;
+}
+
+body {
+  color: #17243a;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: #dbeafe;
+  color: #173b83;
+}
+
+:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.32);
+  outline-offset: 2px;
+}
+
+.page-container {
+  padding-top: 48px;
+  padding-bottom: 52px;
+}
+
+.page-header {
+  margin-bottom: 32px;
+}
+
+.page-header h1 {
+  letter-spacing: -0.035em;
+}
+
+.card {
+  border-color: #e7ebf3;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.09);
+}
+
+.btn {
+  font-weight: 700;
+  letter-spacing: 0.005em;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 6px 16px rgba(31, 91, 216, 0.2);
+}
+
+input,
+select,
+textarea {
+  border-color: #d6deea;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9aa7ba;
+}
+
+.table-container {
+  box-shadow: var(--shadow-sm);
+}
+
+th {
+  color: #526178;
+  letter-spacing: 0.025em;
+}
+
+tbody tr {
+  transition: background 0.16s ease;
+}
+
+tbody tr:hover {
+  background: #f8faff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
