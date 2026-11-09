@@ -41,7 +41,7 @@ function ApplicationForm() {
         // LOAD SCHOLARSHIP
 
         const scholarshipResponse = await fetch(
-          `http://localhost:5000/api/scholarships/${id}`,
+          `/api/scholarships/${id}`,
           {
             method: "GET",
             headers: {
@@ -66,7 +66,7 @@ function ApplicationForm() {
         // LOAD STUDENT PROFILE
 
         const profileResponse = await fetch(
-          "http://localhost:5000/api/student/profile",
+          "/api/student/profile",
           {
             method: "GET",
             headers: {
@@ -259,7 +259,7 @@ function ApplicationForm() {
       });
 
       const response = await fetch(
-        "http://localhost:5000/api/applications",
+        "/api/applications",
         {
           method: "POST",
           headers: {

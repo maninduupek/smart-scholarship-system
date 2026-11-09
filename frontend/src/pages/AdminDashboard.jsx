@@ -31,7 +31,7 @@ function AdminDashboard() {
 
       try {
         const response = await fetch(
-          "http://localhost:5000/api/admin/dashboard",
+          "/api/admin/dashboard",
           {
             method: "GET",
             headers: {

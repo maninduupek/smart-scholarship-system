@@ -26,6 +26,8 @@ const app = express();
 
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET;
+const MONGODB_URI =
+  process.env.MONGODB_URI || process.env.MONGO_URI;
 
 // ==========================================
 // UPLOADED FILE CLEANUP HELPER
@@ -75,18 +77,6 @@ app.use(express.json());
 // ==========================================
 // DATABASE CONNECTION
 // ==========================================
-
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log("MongoDB connected successfully!");
-  })
-  .catch((error) => {
-    console.error(
-      "MongoDB connection failed:",
-      error
-    );
-  });
 
 // ==========================================
 // HOME TEST ROUTE
@@ -2854,12 +2844,30 @@ app.use(
 // START SERVER
 // ==========================================
 
-app.listen(
-  PORT,
+const startServer = async () => {
+  if (!MONGODB_URI) {
+    throw new Error(
+      "MONGODB_URI is required. Set it in backend/.env."
+    );
+  }
 
-  () => {
+  if (!JWT_SECRET) {
+    throw new Error(
+      "JWT_SECRET is required. Set it in backend/.env."
+    );
+  }
+
+  await mongoose.connect(MONGODB_URI);
+  console.log("MongoDB connected successfully!");
+
+  app.listen(PORT, () => {
     console.log(
       `Server running on http://localhost:${PORT}`
     );
-  }
-);
+  });
+};
+
+startServer().catch((error) => {
+  console.error("Failed to start backend:", error);
+  process.exit(1);
+});

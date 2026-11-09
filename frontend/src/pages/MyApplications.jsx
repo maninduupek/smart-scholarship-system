@@ -31,7 +31,7 @@ function MyApplications() {
 
       try {
         const response = await fetch(
-          "http://localhost:5000/api/applications/my",
+          "/api/applications/my",
           {
             method: "GET",
             headers: {

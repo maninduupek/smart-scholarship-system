@@ -39,7 +39,7 @@ function EditScholarship() {
 
       try {
         const response = await fetch(
-          `http://localhost:5000/api/scholarships/${id}`,
+          `/api/scholarships/${id}`,
           {
             method: "GET",
             headers: {
@@ -159,7 +159,7 @@ function EditScholarship() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/scholarships/${id}`,
+        `/api/scholarships/${id}`,
         {
           method: "PUT",
 

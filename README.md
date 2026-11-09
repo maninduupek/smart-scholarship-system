@@ -52,6 +52,35 @@ The application follows a three-tier architecture:
 
 Docker Compose is used to manage the three application services.
 
+## Running Locally with MongoDB
+
+1. Start the local MongoDB service on port `27017`.
+2. Copy `backend/.env.example` to `backend/.env` and set a private, long
+   `JWT_SECRET`. The MongoDB setting should be:
+
+   ```env
+   MONGODB_URI=mongodb://127.0.0.1:27017/smartScholarshipDB
+   ```
+
+3. In one terminal, start the backend:
+
+   ```bash
+   cd backend
+   npm install
+   npm run dev
+   ```
+
+4. In another terminal, start the frontend:
+
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+The Vite development server proxies `/api` requests to the backend at
+`http://localhost:5000`.
+
 ## Running the Project with Docker
 
 ### Prerequisites
@@ -74,7 +103,10 @@ Docker Compose is used to manage the three application services.
    cd smart-scholarship-system
    ```
 
-3. Configure the backend environment variables in `backend/.env` according to the backend requirements. Keep secret values private.
+3. Copy `backend/.env.example` to `backend/.env` and set a private, long
+   `JWT_SECRET`. Docker Compose connects the backend to its MongoDB service
+   automatically; the local `MONGODB_URI` in this file is overridden inside
+   the container.
 
 4. Start the application:
 
@@ -100,7 +132,9 @@ Docker Compose is used to manage the three application services.
    docker compose stop
    ```
 
-**Note:** The Docker Compose configuration uses an external Docker network and an external MongoDB volume. These must be created or provisioned before starting a fresh installation. Do not delete the MongoDB volume when stopping the application.
+The MongoDB data is stored in a named Docker volume and persists when the
+containers are stopped. The Docker-host MongoDB port is `27018`; the local
+MongoDB URI above uses port `27017`.
 
 ## Continuous Integration
 

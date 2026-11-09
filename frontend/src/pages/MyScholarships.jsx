@@ -23,7 +23,7 @@ function MyScholarships() {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/scholarships/provider/my",
+        "/api/scholarships/provider/my",
         {
           method: "GET",
           headers: {
@@ -71,7 +71,7 @@ function MyScholarships() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/scholarships/${scholarshipId}/status`,
+        `/api/scholarships/${scholarshipId}/status`,
         {
           method: "PATCH",
           headers: {

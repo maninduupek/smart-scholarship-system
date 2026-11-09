@@ -25,7 +25,7 @@ function AdminUsers() {
 
       try {
         const response = await fetch(
-          "http://localhost:5000/api/admin/users",
+          "/api/admin/users",
           {
             method: "GET",
             headers: {

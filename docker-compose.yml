@@ -6,8 +6,11 @@ services:
       - "27018:27017"
     volumes:
       - scholarship-mongodb-data:/data/db
-    networks:
-      - scholarship-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
 
   backend:
@@ -19,13 +22,12 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      MONGO_URI: mongodb://mongodb:27017/smartScholarshipDB
+      MONGODB_URI: mongodb://mongodb:27017/smartScholarshipDB
     volumes:
       - ${USERPROFILE}/smart-scholarship-uploads:/app/uploads
     depends_on:
-      - mongodb
-    networks:
-      - scholarship-network
+      mongodb:
+        condition: service_healthy
     restart: unless-stopped
 
   frontend:
@@ -36,14 +38,7 @@ services:
       - "3000:80"
     depends_on:
       - backend
-    networks:
-      - scholarship-network
     restart: unless-stopped
 
 volumes:
   scholarship-mongodb-data:
-    external: true
-
-networks:
-  scholarship-network:
-    external: true

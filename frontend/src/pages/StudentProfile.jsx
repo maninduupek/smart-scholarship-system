@@ -31,7 +31,7 @@ function StudentProfile() {
 
       try {
         const response = await fetch(
-          "http://localhost:5000/api/student/profile",
+          "/api/student/profile",
           {
             method: "GET",
             headers: {
@@ -105,7 +105,7 @@ function StudentProfile() {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/student/profile",
+        "/api/student/profile",
         {
           method: "PUT",
           headers: {

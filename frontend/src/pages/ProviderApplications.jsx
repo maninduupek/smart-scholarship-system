@@ -24,7 +24,7 @@ function ProviderApplications() {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/applications/provider",
+        "/api/applications/provider",
         {
           method: "GET",
           headers: {
@@ -100,7 +100,7 @@ function ProviderApplications() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/applications/${applicationId}/status`,
+        `/api/applications/${applicationId}/status`,
         {
           method: "PATCH",
           headers: {
@@ -165,7 +165,7 @@ function ProviderApplications() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/applications/${applicationId}/documents/${documentId}`,
+        `/api/applications/${applicationId}/documents/${documentId}`,
         {
           method: "GET",
           headers: {

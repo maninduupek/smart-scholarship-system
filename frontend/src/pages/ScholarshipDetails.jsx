@@ -57,7 +57,7 @@ function ScholarshipDetails() {
         try {
           const response =
             await fetch(
-              `http://localhost:5000/api/scholarships/${id}`,
+              `/api/scholarships/${id}`,
               {
                 method: "GET",
                 headers: {
@@ -108,7 +108,7 @@ function ScholarshipDetails() {
       try {
         const response =
           await fetch(
-            `http://localhost:5000/api/scholarships/${id}/eligibility`,
+            `/api/scholarships/${id}/eligibility`,
             {
               method: "GET",
               headers: {
